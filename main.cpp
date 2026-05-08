@@ -1,19 +1,18 @@
 #include <raylib.h>
 #include <iostream>
 #include "glm/glm.hpp"
+#include "includes/cells.hpp"
 
-#define startHeight 540
-#define startWidth 960
+#define startHeight 900
+#define startWidth 900
 
 
 int main(int argc, char* argv[]) {
 
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(startWidth, startHeight, "Evolution");
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
 
-    glm::vec2 test = glm::vec2(0);
 
     while(!WindowShouldClose()){
 
@@ -22,7 +21,7 @@ int main(int argc, char* argv[]) {
 
         BeginDrawing();
             ClearBackground(GRAY);
-
+            DrawText(TextFormat("%.4f ms", GetFrameTime() * 1000.0f), 10, startHeight - 30.0f, 20, GREEN);
         EndDrawing();
     }
 
