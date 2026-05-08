@@ -1,0 +1,23 @@
+CXX       := /usr/bin/g++
+CXX_FLAGS := -std=c++17 -Wextra -Wpedantic -g -O3 -march=native -ffast-math# -fsanitize=address -g #-Wall
+RAYLIB_LDFLAGS := $(shell pkg-config --libs raylib)
+RAYLIB_CFLAGS := $(shell pkg-config --cflags raylib)
+
+SRC := sources
+INC := includes
+
+
+all: clean evolution
+
+evolution: main.cpp $(SRC)/*.cpp $(RUST_LIB)
+	$(CXX) $(CXX_FLAGS) $(RAYLIB_CFLAGS) $^ -o $@ $(RAYLIB_LDFLAGS) -I$(INC)
+
+
+run: all
+	./evolution
+
+clean:
+	rm -f evolution
+
+clean-all: clean
+	cargo clean
