@@ -1,5 +1,17 @@
 #include "Scene.hpp"
 
+
+void Scene::CreateCells(vec2 size){
+    if (cells) delete cells;
+    cells = new Cells(size);
+}
+
+
+Scene::~Scene(){
+    if (cells) delete cells;
+}
+
+
 void Scene::CameraUpdate(){
     if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON) || IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
         Vector2 mouseDelta = GetMouseDelta();
@@ -26,5 +38,5 @@ void Scene::CameraUpdate(){
 
 
 void Scene::Draw(){
-    DrawRectangle(0, 0, 300, 200, LIGHTGRAY);
+    DrawRectangle(0, 0, 300, 200, GRAY);
 }

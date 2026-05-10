@@ -1,4 +1,3 @@
-#include "Cells.hpp"
 #include "Scene.hpp"
 
 #define startHeight 900
@@ -20,7 +19,7 @@ int main(int argc, char* argv[]) {
         scene.CameraUpdate();
 
         BeginDrawing();
-            ClearBackground(GRAY);
+            ClearBackground(DARKGRAY);
             BeginMode2D(scene.camera);
 
                 scene.Draw();
