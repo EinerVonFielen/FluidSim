@@ -7,17 +7,17 @@ SRC := sources
 INC := includes
 
 
-all: clean evolution
+all: clean fluidsim
 
-evolution: main.cpp $(SRC)/*.cpp $(RUST_LIB)
+fluidsim: main.cpp $(SRC)/*.cpp $(RUST_LIB)
 	$(CXX) $(CXX_FLAGS) $(RAYLIB_CFLAGS) $^ -o $@ $(RAYLIB_LDFLAGS) -I$(INC)
 
 
 run: all
-	./evolution
+	./fluidsim
 
 clean:
-	rm -f evolution
+	rm -f fluidsim
 
 clean-all: clean
 	cargo clean
