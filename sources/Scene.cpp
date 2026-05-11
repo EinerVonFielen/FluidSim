@@ -1,9 +1,9 @@
 #include "Scene.hpp"
-
+#include "Cells.hpp"
 
 void Scene::CreateCells(vec2 size){
     if (cells) delete cells;
-    cells = new Cells(size);
+    cells = new Cells(size, 540, 960);
 }
 
 
@@ -38,5 +38,5 @@ void Scene::CameraUpdate(){
 
 
 void Scene::Draw(){
-    DrawRectangle(0, 0, 300, 200, GRAY);
+    DrawRectangle(0, 0, 300, 200.4, GRAY);
 }
