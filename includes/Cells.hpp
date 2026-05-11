@@ -1,9 +1,11 @@
 #pragma once
 #include "Cell.hpp"
-#include "glm/glm.hpp"
-#include <glm/vec2.hpp>
+#include <iostream>
+#include <raylib.h>
 
-using glm::vec2;
+#define BLUEGRAY {45, 58, 69, 255}
+#define GRAY1 {44, 48, 51, 255}
+#define GRAY2 {35, 38, 41, 255} 
 
 class Cells{
 
@@ -12,13 +14,12 @@ class Cells{
     vec2 size;
     Cell* cells;
     int cellcount;
-    int startHeight;
-    int startWidth;
+    float cellsize;
     float* velocitiesX;
     float* velocitiesY;
 
-    Cells(vec2 size, int startHeight, int startWidth);
+    Cells(vec2 size, float cellsize);
     void Draw();
+    void Update();
     ~Cells();
-
 };

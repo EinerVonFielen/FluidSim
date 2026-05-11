@@ -1,5 +1,3 @@
-#include <raylib.h>
-#include <iostream>
 #include "Cells.hpp"
 
 
@@ -16,6 +14,8 @@ class Scene{
     ~Scene();
     Scene(vec2 size) : windowSize(size) { camera = { Vector2{ windowSize.x/2, windowSize.y/2}, { 0.0f, 0.0f }, 0.0f, 1.0f }; }
     void CameraUpdate();
+    void SetSize(vec2 size) { windowSize = size; camera.offset = {size.x / 2.0f, size.y/2.0f}; }
     void Draw();
-    void CreateCells(vec2 size);
+    void Update();
+    void CreateCells(vec2 size, float cellsize);
 };

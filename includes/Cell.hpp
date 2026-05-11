@@ -1,31 +1,16 @@
-
-
-
 #pragma once
-#include <glm/vec2.hpp>
 #include "glm/glm.hpp"
-#include <raylib.h>
-#include <iostream>
+
+using glm::vec2;
+
 class Cell{
     public:
-    float density;
-    glm::vec2 position;
-    int startHeight;
-    int startWidth;
-    int cellcount;
+
+    float pressure;
+    vec2 position;
+    int size;
    
     Cell() = default;
-    Cell(int x, int y, float density, int startHeight, int startWidth, int cellcount){
-        position = glm::vec2(x,y);
-        this->density = density;
-        this->startHeight = startHeight;
-        this->startWidth = startWidth;
-        this->cellcount = cellcount;
-    }
 
-
-    void Draw(){
-        DrawRectangle(position.x/startHeight, position.y/startWidth, startHeight/cellcount, startWidth/cellcount, RED);
-    }   
-    void updateDensity(){};
+    Cell(vec2 pos, float pressure, int size) : position(pos), pressure(pressure), size(size) {}
 };

@@ -1,9 +1,10 @@
 #include "Scene.hpp"
 #include "Cells.hpp"
 
-void Scene::CreateCells(vec2 size){
+void Scene::CreateCells(vec2 size, float cellsize){
     if (cells) delete cells;
-    cells = new Cells(size, 540, 960);
+    cells = new Cells(size, cellsize);
+    camera.target = {size.x * cellsize * 0.5f, size.y * cellsize * 0.5f};
 }
 
 
@@ -38,5 +39,10 @@ void Scene::CameraUpdate(){
 
 
 void Scene::Draw(){
-    DrawRectangle(0, 0, 300, 200.4, GRAY);
+    if (cells) cells->Draw();
+}
+
+
+void Scene::Update(){
+    if (cells) cells->Update();
 }
