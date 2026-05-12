@@ -20,6 +20,7 @@ class Cells{
 
     Cells(vec2 size, float cellsize);
     void Draw();
-    void Update();
+    void UpdatePressure(float deltaTime);
+    void UpdateVelocities(float deltaTime);
     ~Cells();
 };
