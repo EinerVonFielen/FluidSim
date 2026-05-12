@@ -16,6 +16,6 @@ class Scene{
     void CameraUpdate();
     void SetSize(vec2 size) { windowSize = size; camera.offset = {size.x / 2.0f, size.y/2.0f}; }
     void Draw();
-    void Update();
-    void CreateCells(vec2 size, float cellsize);
+    void Update(float dt);
+    void CreateCells(ivec2 size, float cellsize);
 };

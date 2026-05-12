@@ -1,20 +1,43 @@
 #include "Cells.hpp"
 
 
-Cells::Cells(vec2 Size, float Cellsize){
+Cells::Cells(ivec2 Size, float Cellsize){
     size = Size;
     cellsize = Cellsize;
-    cellcount = static_cast<int>(size.x * size.y);
+    cellcount = size.x * size.y;
     cells = new Cell[cellcount];
-    velocitiesX = new float[cellcount + static_cast<int>(size.y)];
-    velocitiesY = new float[cellcount + static_cast<int>(size.x)];
+    velocitiesX = new float[cellcount + size.y];
+    velocitiesY = new float[cellcount + size.x];
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
-            cells[y * static_cast<int>(size.x) + x] = Cell(vec2(x, y) * cellsize, 0.0f, cellsize);
+            cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, 0.0f, cellsize);
         }
     }
-    //velocitiesX = new float[cellcount + size.y];
-    //velocitiesY = new float[cellcount + size.x];
+    velocitiesX = new float[cellcount + size.y];
+    for (int i = 0; i < cellcount + size.y; i++){
+        velocitiesX[i] = GetRandomValue(-1000, 1000) / 1000.0f;
+    }
+    velocitiesY = new float[cellcount + size.x];
+    for (int i = 0; i < cellcount + size.x; i++){
+        velocitiesY[i] = GetRandomValue(-1000, 1000) / 1000.0f;
+    }
+}
+
+
+Color PressureToColor(float f){
+    Color secondary;
+    if (f < 0){
+        secondary = BLUE;
+    } else {
+        secondary = RED;
+    }
+    constexpr float maxvalue = 10.0f;
+    f = glm::abs(glm::clamp(f, -maxvalue, maxvalue)) / maxvalue;
+    float f_inv = 1.0f - f;
+    return {static_cast<unsigned char>(GRAY1.r * f_inv + secondary.r * f),
+            static_cast<unsigned char>(GRAY1.g * f_inv + secondary.g * f),
+            static_cast<unsigned char>(GRAY1.b * f_inv + secondary.b * f),
+            255};
 }
 
 
@@ -22,78 +45,88 @@ void Cells::Draw(){
     const int outline = cellsize / 20.0f;
     DrawRectangle(-outline, -outline, size.x * cellsize + outline * 2, size.y * cellsize + outline * 2, GRAY2);
 
-    for (int i = 0; i < size.x; i++){
-        for (int j = 0; j < size.y; j++){
-            //std::cout << " 1 Drawing cell at (" << i << ", " << j << ")" << std::endl; // Debug output
-            Cell current_cell = cells[i * static_cast<int>(size.y) + j];
-            DrawRectangle(current_cell.position.x + outline, current_cell.position.y + outline, cellsize - outline * 2.0f, cellsize - outline * 2.0f, GRAY1);
+    for (int i = 0; i < cellcount; i++){   
+        Cell current_cell = cells[i];
+        DrawRectangle(current_cell.position.x + outline, current_cell.position.y + outline, cellsize - outline * 2.0f, cellsize - outline * 2.0f, PressureToColor(current_cell.pressure));
+    }
+
+    for (int y = 0; y < size.y; y++){
+        for (int x = 0; x < size.x + 1; x++){
+            DrawLineEx({x * cellsize, y * cellsize + cellsize / 2.0f}, {x * cellsize + velocitiesX[y * (size.x + 1) + x] * 50.0f, y * cellsize + cellsize / 2.0f}, 3, WHITE);
+        }
+    }
+    for (int y = 0; y < size.y + 1; y++){
+        for (int x = 0; x < size.x; x++){
+            DrawLineEx({x * cellsize + cellsize / 2.0f, y * cellsize}, {x * cellsize + cellsize / 2.0f, y * cellsize + velocitiesY[y * size.x + x] * 50.0f}, 3, WHITE);
         }
     }
 }
 
 
-void Cells::UpdatePressure(float deltaTime){
-    for (int i = 0; i < size.x; i++){
-        for (int j = 0; j < size.y; j++){
-            Cell& current_cell = cells[i * static_cast<int>(size.y) + j];
+void Cells::Update(float dt){
+    for (int i = 0; i < 30; i++){
+        UpdatePressure(1.0f);
+    }
+    UpdateVelocities(dt * 0.2);
+}
+
+
+void Cells::UpdatePressure(float dt){
+    if (dt <= 0) return;
+    for (int y = 0; y < size.y; y++){
+        for (int x = 0; x < size.x; x++){
+            int current_index = y * size.x + x;
+            Cell& current_cell = cells[current_index];
+
             // Update pressure based on neighboring cells
+
             float pressure_sum = 0.0f;
             float velocity_difference_x = 0.0f;
             float velocity_difference_y = 0.0f;
             int neighbor_count = 0;
+
             // Check neighbors (up, down, left, right)
-            if (i > 0) {
-                pressure_sum += cells[(i - 1) * static_cast<int>(size.y) + j].pressure;
+            //Left
+            if (x > 0) {
+                pressure_sum += cells[current_index - 1].pressure;
                 neighbor_count++;
-                velocity_difference_x -= velocitiesX[(i - 1) * static_cast<int>(size.y) + j];
+                velocity_difference_x -= velocitiesX[current_index + y];
 
             }
-            if (i < size.x - 1) {
-                pressure_sum += cells[(i + 1) * static_cast<int>(size.y) + j].pressure;
+            //Right
+            if (x < size.x - 1) {
+                pressure_sum += cells[current_index + 1].pressure;
                 neighbor_count++;
-                velocity_difference_x += velocitiesX[(i + 1) * static_cast<int>(size.y) + j];
+                velocity_difference_x += velocitiesX[current_index + 1 + y];
             }
-            if (j > 0) {
-                pressure_sum += cells[i * static_cast<int>(size.y) + (j - 1)].pressure;
+            //Up
+            if (y > 0) {
+                pressure_sum += cells[current_index - size.x].pressure;
                 neighbor_count++;
-                velocity_difference_y -= velocitiesY[i * static_cast<int>(size.y) + (j - 1)];
+                velocity_difference_y -= velocitiesY[current_index];
             }
-            if (j < size.y - 1) {
-                pressure_sum += cells[i * static_cast<int>(size.y) + (j + 1)].pressure;
+            //Down
+            if (y < size.y - 1) {
+                pressure_sum += cells[current_index + size.x].pressure;
                 neighbor_count++;
-                velocity_difference_y += velocitiesY[i * static_cast<int>(size.y) + (j + 1)];
+                velocity_difference_y += velocitiesY[current_index + size.y];
             }
-            
-           
-            current_cell.pressure = pressure_sum / nearbyint(neighbor_count) - (cellsize * (velocity_difference_x + velocity_difference_y)) / (nearbyint(neighbor_count) * deltaTime);
-
+            current_cell.pressure = pressure_sum / neighbor_count - (cellsize * (velocity_difference_x + velocity_difference_y)) / (neighbor_count * dt);
         }
     }
 }
 
 void Cells::UpdateVelocities(float deltaTime){
-    for (int i = 0; i < size.x; i++){
-        for (int j = 0; j < size.y +1; j++){
-            float pressure_difference_x = 0.0f;
-            if (i > 0) {
-                pressure_difference_x += cells[(i - 1) * static_cast<int>(size.y) + j].pressure;
-            }
-            if (i < size.x - 1) {
-                pressure_difference_x -= cells[(i + 1) * static_cast<int>(size.y) + j].pressure;
-            }
-            velocitiesX[i * static_cast<int>(size.y) + j] += pressure_difference_x * deltaTime / cellsize;
+    for (int y = 0; y < size.y; y++){
+        for (int x = 1; x < size.x; x++){
+            float pressure_difference_x = cells[y * size.x + x].pressure - cells[y * size.x + x - 1].pressure;
+            velocitiesX[y * (size.x + 1) + x] -= pressure_difference_x * deltaTime / cellsize;
         }
     }
-    for (int i = 0; i < size.x +1; i++){
-        for (int j = 0; j < size.y; j++){
-            float pressure_difference_y = 0.0f;
-            if (j > 0) {
-                pressure_difference_y += cells[i * static_cast<int>(size.y) + (j - 1)].pressure;
-            }
-            if (j < size.y - 1) {
-                pressure_difference_y -= cells[i * static_cast<int>(size.y) + (j + 1)].pressure;
-            }
-            velocitiesY[i * static_cast<int>(size.y) + j] += pressure_difference_y * deltaTime / cellsize;
+    for (int y = 1; y < size.y; y++){
+        for (int x = 0; x < size.x; x++){
+            float pressure_difference_y = cells[y * size.x + x].pressure - cells[(y - 1) * size.x + x].pressure;
+            velocitiesY[y * size.x + x] -= pressure_difference_y * deltaTime / cellsize;
         }
     }
 }
@@ -101,6 +134,6 @@ void Cells::UpdateVelocities(float deltaTime){
 
 Cells::~Cells(){
     delete[] cells;
-    //delete[] velocitiesX;
-    //delete[] velocitiesY;
+    delete[] velocitiesX;
+    delete[] velocitiesY;
 };

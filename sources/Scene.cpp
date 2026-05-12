@@ -1,7 +1,7 @@
 #include "Scene.hpp"
 #include "Cells.hpp"
 
-void Scene::CreateCells(vec2 size, float cellsize){
+void Scene::CreateCells(ivec2 size, float cellsize){
     if (cells) delete cells;
     cells = new Cells(size, cellsize);
     camera.target = {size.x * cellsize * 0.5f, size.y * cellsize * 0.5f};
@@ -43,6 +43,6 @@ void Scene::Draw(){
 }
 
 
-void Scene::Update(){
-    if (cells) cells->Update();
+void Scene::Update(float dt){
+    if (cells) cells->Update(dt);
 }

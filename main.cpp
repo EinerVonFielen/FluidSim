@@ -2,6 +2,7 @@
 
 #define startHeight 900
 #define startWidth 900
+
 Scene scene = Scene(vec2(startWidth, startHeight));
 
 int main(int argc, char* argv[]) {
@@ -10,7 +11,7 @@ int main(int argc, char* argv[]) {
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
 
-    scene.CreateCells(vec2(10, 10), 100);
+    scene.CreateCells(ivec2(10, 10), 100);
 
     while(!WindowShouldClose()){
 
@@ -19,10 +20,10 @@ int main(int argc, char* argv[]) {
             scene.SetSize(newSize);
         }
 
-
         float dt = GetFrameTime();
+
         scene.CameraUpdate();
-        scene.Update();
+        scene.Update(dt);
 
         BeginDrawing();
             ClearBackground(BLUEGRAY);
