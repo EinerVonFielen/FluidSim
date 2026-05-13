@@ -13,5 +13,5 @@ class Cell{
    
     Cell() = default;
 
-    Cell(vec2 pos, float pressure, int size, bool solid) : position(pos), pressure(pressure), size(size), solid(solid) {}
+    Cell(vec2 pos, float pressure, int size) : position(pos), pressure(pressure), size(size) {}
 };

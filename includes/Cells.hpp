@@ -23,5 +23,6 @@ class Cells{
     void Update(float dt);
     void UpdatePressure(float deltaTime);
     void UpdateVelocities(float deltaTime);
+    void SetVelocities();
     ~Cells();
 };

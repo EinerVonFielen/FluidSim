@@ -10,20 +10,34 @@ Cells::Cells(ivec2 Size, float Cellsize){
     velocitiesY = new float[cellcount + size.x];
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
-            if ((x == 0 || x == size.x - 1) && (y == 0 || y == size.y - 1)){
-                cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, 0.0f, cellsize, true);
-            } else {
-                cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, 0.0f, cellsize, false);
-            }
+            cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, 0.0f, cellsize);
+            if (x == 0 || x == size.x - 1 || y == 0 || y == size.y - 1) cells[y * size.x + x].solid = true;
         }
     }
     velocitiesX = new float[cellcount + size.y];
-    for (int i = 0; i < cellcount + size.y; i++){
-        velocitiesX[i] = GetRandomValue(-1000, 1000) / 1000.0f;
-    }
     velocitiesY = new float[cellcount + size.x];
-    for (int i = 0; i < cellcount + size.x; i++){
-        velocitiesY[i] = GetRandomValue(-1000, 1000) / 1000.0f;
+    SetVelocities();
+}
+
+
+void Cells::SetVelocities(){
+    for (int y = 0; y < size.y; y++){
+        for (int x = 0; x < size.x + 1; x++){
+            velocitiesX[y * (size.x + 1) + x] = GetRandomValue(-1000, 1000) / 1000.0f;
+            if (x > 0 && cells[y * size.x + x - 1].solid){
+                velocitiesX[y * (size.x + 1) + x] = 0;
+                velocitiesX[y * (size.x + 1) + x - 1] = 0;
+            }
+        }
+    }
+    for (int y = 0; y < size.y + 1; y++){
+        for (int x = 0; x < size.x; x++){
+            velocitiesY[y * size.x + x] = GetRandomValue(-1000, 1000) / 1000.0f;
+            if (y > 0 && cells[(y - 1) * size.x + x].solid){
+                velocitiesY[y * size.x + x] = 0;
+                velocitiesY[(y - 1) * size.x + x - 1] = 0;
+            }
+        }
     }
 }
 
@@ -69,7 +83,7 @@ void Cells::Draw(){
 
 void Cells::Update(float dt){
     for (int i = 0; i < 30; i++){
-        UpdatePressure(dt);
+        UpdatePressure(1.0f);
     }
     UpdateVelocities(dt * 0.2);
 }
@@ -82,8 +96,12 @@ void Cells::UpdatePressure(float dt){
             int current_index = y * size.x + x;
             Cell& current_cell = cells[current_index];
 
-            // Update pressure based on neighboring cells
+            if (current_cell.solid){
+                current_cell.pressure = 0;
+                continue;
+            }
 
+            // Update pressure based on neighboring cells
             float pressure_sum = 0.0f;
             float velocity_difference_x = 0.0f;
             float velocity_difference_y = 0.0f;
@@ -91,30 +109,25 @@ void Cells::UpdatePressure(float dt){
 
             // Check neighbors (up, down, left, right)
             //Left
-            if (x > 0) {
-                if (cells[current_index - 1].solid) continue;
+            if (x > 0 && !cells[current_index - 1].solid) {
                 pressure_sum += cells[current_index - 1].pressure;
                 neighbor_count++;
                 velocity_difference_x -= velocitiesX[current_index + y];
-
             }
             //Right
-            if (x < size.x - 1) {
-                if (cells[current_index + 1].solid) continue;
+            if (x < size.x - 1 && !cells[current_index + 1].solid) {
                 pressure_sum += cells[current_index + 1].pressure;
                 neighbor_count++;
                 velocity_difference_x += velocitiesX[current_index + 1 + y];
             }
             //Up
-            if (y > 0) {
-                if (cells[current_index - size.x].solid) continue;
+            if (y > 0 && !cells[current_index - size.x].solid) {
                 pressure_sum += cells[current_index - size.x].pressure;
                 neighbor_count++;
                 velocity_difference_y -= velocitiesY[current_index];
             }
             //Down
-            if (y < size.y - 1) {
-                if (cells[current_index + size.x].solid) continue;
+            if (y < size.y - 1 && ! cells[current_index + size.x].solid) {
                 pressure_sum += cells[current_index + size.x].pressure;
                 neighbor_count++;
                 velocity_difference_y += velocitiesY[current_index + size.y];
@@ -128,12 +141,14 @@ void Cells::UpdateVelocities(float deltaTime){
     for (int y = 0; y < size.y; y++){
         for (int x = 1; x < size.x; x++){
             float pressure_difference_x = cells[y * size.x + x].pressure - cells[y * size.x + x - 1].pressure;
+            pressure_difference_x *= !(cells[y * size.x + x].solid || cells[y * size.x + x - 1].solid);
             velocitiesX[y * (size.x + 1) + x] -= pressure_difference_x * deltaTime / cellsize;
         }
     }
     for (int y = 1; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
             float pressure_difference_y = cells[y * size.x + x].pressure - cells[(y - 1) * size.x + x].pressure;
+            pressure_difference_y *= !(cells[y * size.x + x].solid || cells[(y - 1) * size.x + x].solid);
             velocitiesY[y * size.x + x] -= pressure_difference_y * deltaTime / cellsize;
         }
     }

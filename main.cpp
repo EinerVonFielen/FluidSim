@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
 
-    scene.CreateCells(ivec2(100, 100), 10);
+    scene.CreateCells(ivec2(20, 20), 40);
 
     while(!WindowShouldClose()){
 
