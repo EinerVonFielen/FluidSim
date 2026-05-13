@@ -14,7 +14,7 @@ Scene::~Scene(){
 
 
 void Scene::CameraUpdate(){
-    if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON) || IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+    if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON)) {
         Vector2 mouseDelta = GetMouseDelta();
         camera.target.x -= mouseDelta.x / camera.zoom;
         camera.target.y -= mouseDelta.y / camera.zoom;

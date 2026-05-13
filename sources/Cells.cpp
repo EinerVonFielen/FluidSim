@@ -82,10 +82,12 @@ void Cells::Draw(){
 
 
 void Cells::Update(float dt){
-    for (int i = 0; i < 30; i++){
-        UpdatePressure(1.0f);
+    for (int i = 0; i < 50; i++){
+        UpdatePressure(dt);
     }
-    UpdateVelocities(dt * 0.2);
+    UpdateVelocities(dt);
+
+    MouseVelocityChange();
 }
 
 
@@ -141,15 +143,45 @@ void Cells::UpdateVelocities(float deltaTime){
     for (int y = 0; y < size.y; y++){
         for (int x = 1; x < size.x; x++){
             float pressure_difference_x = cells[y * size.x + x].pressure - cells[y * size.x + x - 1].pressure;
-            pressure_difference_x *= !(cells[y * size.x + x].solid || cells[y * size.x + x - 1].solid);
             velocitiesX[y * (size.x + 1) + x] -= pressure_difference_x * deltaTime / cellsize;
+            velocitiesX[y * (size.x + 1) + x] *= !(cells[y * size.x + x].solid || cells[y * size.x + x - 1].solid);
         }
     }
     for (int y = 1; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
             float pressure_difference_y = cells[y * size.x + x].pressure - cells[(y - 1) * size.x + x].pressure;
-            pressure_difference_y *= !(cells[y * size.x + x].solid || cells[(y - 1) * size.x + x].solid);
             velocitiesY[y * size.x + x] -= pressure_difference_y * deltaTime / cellsize;
+            velocitiesY[y * size.x + x] *= !(cells[y * size.x + x].solid || cells[(y - 1) * size.x + x].solid);
+        }
+    }
+}
+
+
+void Cells::MouseVelocityChange(){
+    Vector2 mousePos = GetMousePosition();
+    Vector2 mouseDiff = {mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y};
+    lastMousePos = mousePos;
+
+    if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) return;
+    constexpr float brushsizesq = 100.0f * 100.0f;
+    constexpr float brushstrength = 0.01f;
+
+    for (int y = 0; y < size.y; y++){
+        for (int x = 0; x < size.x + 1; x++){
+            Vector2 pos = {x * cellsize, y * cellsize + cellsize / 2.0f};
+            Vector2 dist = {pos.x - mousePos.x, pos.y - mousePos.y};
+            if (dist.x * dist.x + dist.y * dist.y <= brushsizesq){
+                velocitiesX[y * (size.x + 1) + x] += mouseDiff.x * brushstrength;
+            }
+        }
+    }
+    for (int y = 0; y < size.y + 1; y++){
+        for (int x = 0; x < size.x; x++){
+            Vector2 pos = {x * cellsize + cellsize / 2.0f, y * cellsize};
+            Vector2 dist = {pos.x - mousePos.x, pos.y - mousePos.y};
+            if (dist.x * dist.x + dist.y * dist.y <= brushsizesq){
+                velocitiesY[y * size.x + x] += mouseDiff.y * brushstrength;
+            }
         }
     }
 }

@@ -18,11 +18,14 @@ class Cells{
     float* velocitiesX;
     float* velocitiesY;
 
+    Vector2 lastMousePos = {-1, -1};
+
     Cells(ivec2 size, float cellsize);
     void Draw();
     void Update(float dt);
     void UpdatePressure(float deltaTime);
     void UpdateVelocities(float deltaTime);
     void SetVelocities();
+    void MouseVelocityChange();
     ~Cells();
 };
