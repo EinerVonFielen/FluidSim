@@ -10,7 +10,11 @@ Cells::Cells(ivec2 Size, float Cellsize){
     velocitiesY = new float[cellcount + size.x];
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
-            cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, 0.0f, cellsize);
+            if ((x == 0 || x == size.x - 1) && (y == 0 || y == size.y - 1)){
+                cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, 0.0f, cellsize, true);
+            } else {
+                cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, 0.0f, cellsize, false);
+            }
         }
     }
     velocitiesX = new float[cellcount + size.y];
@@ -65,7 +69,7 @@ void Cells::Draw(){
 
 void Cells::Update(float dt){
     for (int i = 0; i < 30; i++){
-        UpdatePressure(1.0f);
+        UpdatePressure(dt);
     }
     UpdateVelocities(dt * 0.2);
 }
@@ -88,6 +92,7 @@ void Cells::UpdatePressure(float dt){
             // Check neighbors (up, down, left, right)
             //Left
             if (x > 0) {
+                if (cells[current_index - 1].solid) continue;
                 pressure_sum += cells[current_index - 1].pressure;
                 neighbor_count++;
                 velocity_difference_x -= velocitiesX[current_index + y];
@@ -95,18 +100,21 @@ void Cells::UpdatePressure(float dt){
             }
             //Right
             if (x < size.x - 1) {
+                if (cells[current_index + 1].solid) continue;
                 pressure_sum += cells[current_index + 1].pressure;
                 neighbor_count++;
                 velocity_difference_x += velocitiesX[current_index + 1 + y];
             }
             //Up
             if (y > 0) {
+                if (cells[current_index - size.x].solid) continue;
                 pressure_sum += cells[current_index - size.x].pressure;
                 neighbor_count++;
                 velocity_difference_y -= velocitiesY[current_index];
             }
             //Down
             if (y < size.y - 1) {
+                if (cells[current_index + size.x].solid) continue;
                 pressure_sum += cells[current_index + size.x].pressure;
                 neighbor_count++;
                 velocity_difference_y += velocitiesY[current_index + size.y];

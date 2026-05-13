@@ -9,8 +9,9 @@ class Cell{
     float pressure;
     vec2 position;
     int size;
+    bool solid = false;
    
     Cell() = default;
 
-    Cell(vec2 pos, float pressure, int size) : position(pos), pressure(pressure), size(size) {}
+    Cell(vec2 pos, float pressure, int size, bool solid) : position(pos), pressure(pressure), size(size), solid(solid) {}
 };
