@@ -69,13 +69,13 @@ void Cells::Draw(){
     }
 
     for (int y = 0; y < size.y; y++){
-        for (int x = 0; x < size.x + 1; x++){
-            DrawLineEx({x * cellsize, y * cellsize + cellsize / 2.0f}, {x * cellsize + velocitiesX[y * (size.x + 1) + x] * 50.0f, y * cellsize + cellsize / 2.0f}, 3, WHITE);
-        }
-    }
-    for (int y = 0; y < size.y + 1; y++){
         for (int x = 0; x < size.x; x++){
-            DrawLineEx({x * cellsize + cellsize / 2.0f, y * cellsize}, {x * cellsize + cellsize / 2.0f, y * cellsize + velocitiesY[y * size.x + x] * 50.0f}, 3, WHITE);
+            if (cells[y * size.y + x].solid) continue;
+            vec2 pos = cells[y * size.y + x].position + vec2(cellsize / 2.0f);
+            vec2 arrow = vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f;
+            arrow *= cellsize / 2.0f;
+            DrawLineEx({pos.x, pos.y}, {pos.x + arrow.x, pos.y + arrow.y}, cellsize / 20.0f, WHITE);
+            DrawCircle(pos.x, pos.y, cellsize / 20.0f, WHITE);
         }
     }
 }

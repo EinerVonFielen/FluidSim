@@ -6,6 +6,8 @@
 Scene scene = Scene(vec2(startWidth, startHeight));
 
 int main(int argc, char* argv[]) {
+
+    SetConfigFlags(FLAG_MSAA_4X_HINT);
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(startWidth, startHeight, "Fluid Simulation");
     SetTargetFPS(60);
