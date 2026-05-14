@@ -44,5 +44,6 @@ void Scene::Draw(){
 
 
 void Scene::Update(float dt){
-    if (cells) cells->Update(dt);
+    Vector2 mousePos = GetScreenToWorld2D(GetMousePosition(), camera);
+    if (cells) cells->Update(dt, mousePos);
 }

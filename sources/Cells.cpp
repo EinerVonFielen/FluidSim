@@ -70,8 +70,8 @@ void Cells::Draw(){
 
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
-            if (cells[y * size.y + x].solid) continue;
-            vec2 pos = cells[y * size.y + x].position + vec2(cellsize / 2.0f);
+            if (cells[y * size.x + x].solid) continue;
+            vec2 pos = cells[y * size.x + x].position + vec2(cellsize / 2.0f);
             vec2 arrow = vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f;
             arrow *= cellsize / 2.0f;
             DrawLineEx({pos.x, pos.y}, {pos.x + arrow.x, pos.y + arrow.y}, cellsize / 20.0f, WHITE);
@@ -81,13 +81,13 @@ void Cells::Draw(){
 }
 
 
-void Cells::Update(float dt){
+void Cells::Update(float dt, Vector2 mousePos){
     for (int i = 0; i < 50; i++){
         UpdatePressure(dt);
     }
     UpdateVelocities(dt);
 
-    MouseVelocityChange();
+    MouseVelocityChange(mousePos);
 }
 
 
@@ -132,7 +132,7 @@ void Cells::UpdatePressure(float dt){
             if (y < size.y - 1 && ! cells[current_index + size.x].solid) {
                 pressure_sum += cells[current_index + size.x].pressure;
                 neighbor_count++;
-                velocity_difference_y += velocitiesY[current_index + size.y];
+                velocity_difference_y += velocitiesY[current_index + size.x];
             }
             current_cell.pressure = pressure_sum / neighbor_count - (cellsize * (velocity_difference_x + velocity_difference_y)) / (neighbor_count * dt);
         }
@@ -157,21 +157,21 @@ void Cells::UpdateVelocities(float deltaTime){
 }
 
 
-void Cells::MouseVelocityChange(){
-    Vector2 mousePos = GetMousePosition();
+void Cells::MouseVelocityChange(Vector2 mousePos){
     Vector2 mouseDiff = {mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y};
     lastMousePos = mousePos;
 
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) return;
-    constexpr float brushsizesq = 100.0f * 100.0f;
+    constexpr float brushsize = 100.0f;
     constexpr float brushstrength = 0.01f;
 
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x + 1; x++){
             Vector2 pos = {x * cellsize, y * cellsize + cellsize / 2.0f};
             Vector2 dist = {pos.x - mousePos.x, pos.y - mousePos.y};
-            if (dist.x * dist.x + dist.y * dist.y <= brushsizesq){
-                velocitiesX[y * (size.x + 1) + x] += mouseDiff.x * brushstrength;
+            float r = glm::sqrt(dist.x * dist.x + dist.y * dist.y);
+            if (r <= brushsize){
+                velocitiesX[y * (size.x + 1) + x] += mouseDiff.x * brushstrength * ((brushsize - r) / brushsize);
             }
         }
     }
@@ -179,8 +179,9 @@ void Cells::MouseVelocityChange(){
         for (int x = 0; x < size.x; x++){
             Vector2 pos = {x * cellsize + cellsize / 2.0f, y * cellsize};
             Vector2 dist = {pos.x - mousePos.x, pos.y - mousePos.y};
-            if (dist.x * dist.x + dist.y * dist.y <= brushsizesq){
-                velocitiesY[y * size.x + x] += mouseDiff.y * brushstrength;
+            float r = glm::sqrt(dist.x * dist.x + dist.y * dist.y);
+            if (r <= brushsize){
+                velocitiesY[y * size.x + x] += mouseDiff.y * brushstrength / r;
             }
         }
     }

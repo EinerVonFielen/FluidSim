@@ -22,10 +22,10 @@ class Cells{
 
     Cells(ivec2 size, float cellsize);
     void Draw();
-    void Update(float dt);
+    void Update(float dt, Vector2 mousePos);
     void UpdatePressure(float deltaTime);
     void UpdateVelocities(float deltaTime);
     void SetVelocities();
-    void MouseVelocityChange();
+    void MouseVelocityChange(Vector2 mousePos);
     ~Cells();
 };
