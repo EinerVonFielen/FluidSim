@@ -18,7 +18,12 @@ class Cells{
     float* velocitiesX;
     float* velocitiesY;
 
+    Image cellimage;
+    Color* cellimagedata;
+    Texture2D celltexture;
+
     Vector2 lastMousePos = {-1, -1};
+    bool shoulddrawarrow = true;
 
     Cells(ivec2 size, float cellsize);
     void Draw();

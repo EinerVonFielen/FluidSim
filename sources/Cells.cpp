@@ -10,13 +10,14 @@ Cells::Cells(ivec2 Size, float Cellsize){
     velocitiesY = new float[cellcount + size.x];
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
-            cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, 0.0f, cellsize);
+            cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, -2.0f, cellsize);
             if (x == 0 || x == size.x - 1 || y == 0 || y == size.y - 1) cells[y * size.x + x].solid = true;
         }
     }
-    velocitiesX = new float[cellcount + size.y];
-    velocitiesY = new float[cellcount + size.x];
     SetVelocities();
+    cellimage = GenImageColor(size.x, size.y, WHITE);
+    cellimagedata = (Color*) cellimage.data;
+    celltexture = LoadTextureFromImage(cellimage);
 }
 
 
@@ -65,9 +66,16 @@ void Cells::Draw(){
 
     for (int i = 0; i < cellcount; i++){   
         Cell current_cell = cells[i];
-        DrawRectangle(current_cell.position.x + outline, current_cell.position.y + outline, cellsize - outline * 2.0f, cellsize - outline * 2.0f, PressureToColor(current_cell.pressure));
+        Color cellcolor = PressureToColor(current_cell.pressure);
+        cellimagedata[i] = cellcolor;
+        //DrawRectangle(current_cell.position.x + outline, current_cell.position.y + outline, cellsize - outline * 2.0f, cellsize - outline * 2.0f, cellcolor);
     }
 
+    UpdateTexture(celltexture, cellimage.data);
+    DrawTextureEx(celltexture, {0, 0}, 0, cellsize, WHITE);
+
+
+    if (!shoulddrawarrow) return;
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
             if (cells[y * size.x + x].solid) continue;
@@ -88,6 +96,7 @@ void Cells::Update(float dt, Vector2 mousePos){
     UpdateVelocities(dt);
 
     MouseVelocityChange(mousePos);
+    if (IsKeyPressed(KEY_SPACE)) shoulddrawarrow = !shoulddrawarrow;
 }
 
 
