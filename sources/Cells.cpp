@@ -287,30 +287,13 @@ vec2 Cells::GetVelocityAtPosition(vec2 pos)
     return { velocityX, velocityY };
 }
 
-/*
-vec2 Cells::GetVelocityAtPosition(vec2 pos){
-    pos /= cellsize;
-    int cellX = static_cast<int>(pos.x);
-    int cellY = static_cast<int>(pos.y);
 
-    double distx = pos.x - cellX;
-    double disty = pos.y - cellY;
-
-    std::cout << distx << std::endl;
-
-    if (cellX < 0 || cellX >= size.x || cellY < 0 || cellY >= size.y) return {0, 0};
-
-    float velocityX = velocitiesX[cellY * (size.x + 1) + cellX] * (1.0 - distx) + velocitiesX[cellY * (size.x + 1) + cellX + 1] * distx;
-    float velocityY = velocitiesY[cellY * size.x + cellX] * (1.0 - disty) + velocitiesY[(cellY + 1) * size.x + cellX] * disty;
-    return {velocityX, velocityY};
-}
-*/
 
 void Cells::UpdateVelocities(float dt){
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x + 1; x++){
             vec2 Pos = {x * cellsize, y * cellsize + cellsize / 2.0f};
-            Pos -= GetVelocityAtPosition(Pos) * dt * 10.0f;
+            Pos -= GetVelocityAtPosition(Pos) * dt;
             newvelocitiesX[y * (size.x + 1) + x] = GetVelocityAtPosition(Pos).x;
         }
     }
