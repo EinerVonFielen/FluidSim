@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     SetTargetFPS(framerate);
     SetExitKey(KEY_NULL);
 
-    scene.CreateCells(ivec2(20, 20), 40);
+    scene.CreateCells(ivec2(50, 50), 40);
 
     unsigned long int framecounter = 1, drawtime = 0, updatetime = 0;
 

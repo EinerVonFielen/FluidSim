@@ -9,6 +9,7 @@ class Cell{
     float pressure;
     vec2 position;
     int size;
+    float divergence;
     bool solid = false;
    
     Cell() = default;

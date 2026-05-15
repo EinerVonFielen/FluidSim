@@ -29,7 +29,9 @@ class Cells{
     void Draw();
     void Update(float dt, Vector2 mousePos);
     void UpdatePressure(float deltaTime);
+    void UpdateDivergence();
     void UpdateVelocities(float deltaTime);
+    void UpdateVelocitiesForDivergence(float deltaTime);
     void SetVelocities();
     void MouseVelocityChange(Vector2 mousePos);
     ~Cells();

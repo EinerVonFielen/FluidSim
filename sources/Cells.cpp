@@ -21,6 +21,7 @@ Cells::Cells(ivec2 Size, float Cellsize){
 }
 
 
+
 void Cells::SetVelocities(){
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x + 1; x++){
@@ -66,7 +67,7 @@ void Cells::Draw(){
 
     for (int i = 0; i < cellcount; i++){   
         Cell current_cell = cells[i];
-        Color cellcolor = PressureToColor(current_cell.pressure);
+        Color cellcolor = PressureToColor(current_cell.divergence);
         cellimagedata[i] = cellcolor;
         //DrawRectangle(current_cell.position.x + outline, current_cell.position.y + outline, cellsize - outline * 2.0f, cellsize - outline * 2.0f, cellcolor);
     }
@@ -93,13 +94,30 @@ void Cells::Update(float dt, Vector2 mousePos){
     for (int i = 0; i < 50; i++){
         UpdatePressure(dt);
     }
+    UpdateVelocitiesForDivergence(dt);
     UpdateVelocities(dt);
-
+    UpdateDivergence();
     MouseVelocityChange(mousePos);
     if (IsKeyPressed(KEY_SPACE)) shoulddrawarrow = !shoulddrawarrow;
 }
 
-
+void Cells::UpdateDivergence(){
+    for (int y = 0; y < size.y; y++){
+        for (int x = 0; x < size.x; x++){
+            int current_index = y * size.x + x;
+            Cell& current_cell = cells[current_index];
+            if (current_cell.solid){
+                current_cell.divergence = 0;
+                continue;
+            }
+            float velocityXLeft = velocitiesX[y * (size.x + 1) + x];
+            float velocityXRight = velocitiesX[y * (size.x + 1) + x + 1];
+            float velocityYUp = velocitiesY[y * size.x + x];
+            float velocityYDown = velocitiesY[(y + 1) * size.x + x];
+            current_cell.divergence = (velocityXRight - velocityXLeft + velocityYDown - velocityYUp) / cellsize;
+        }
+    }
+}
 void Cells::UpdatePressure(float dt){
     if (dt <= 0) return;
     for (int y = 0; y < size.y; y++){
@@ -148,7 +166,7 @@ void Cells::UpdatePressure(float dt){
     }
 }
 
-void Cells::UpdateVelocities(float deltaTime){
+void Cells::UpdateVelocitiesForDivergence(float deltaTime){
     for (int y = 0; y < size.y; y++){
         for (int x = 1; x < size.x; x++){
             float pressure_difference_x = cells[y * size.x + x].pressure - cells[y * size.x + x - 1].pressure;
@@ -164,7 +182,31 @@ void Cells::UpdateVelocities(float deltaTime){
         }
     }
 }
+vec2 GetVelocityAtPosition(Cells& cells, float x, float y){
+    int cellX = static_cast<int>(x / cells.cellsize);
+    int cellY = static_cast<int>(y / cells.cellsize);
+    if (cellX < 0 || cellX >= cells.size.x || cellY < 0 || cellY >= cells.size.y) return {0, 0};
 
+    float velocityX = (cells.velocitiesX[cellY * (cells.size.x + 1) + cellX] + cells.velocitiesX[cellY * (cells.size.x + 1) + cellX + 1]) * 0.5f;
+    float velocityY = (cells.velocitiesY[cellY * cells.size.x + cellX] + cells.velocitiesY[(cellY + 1) * cells.size.x + cellX]) * 0.5f;
+    return {velocityX, velocityY};
+}
+void Cells::UpdateVelocities(float dt){
+    for (int y = 0; y < size.y; y++){
+        for (int x = 0; x < size.x + 1; x++){
+            vec2 Pos = {x * cellsize, y * cellsize + cellsize / 2.0f};
+             Pos = Pos - GetVelocityAtPosition(*this, x * cellsize, y * cellsize + cellsize / 2.0f) * dt;
+            velocitiesX[y * (size.x + 1) + x] = GetVelocityAtPosition(*this, Pos.x, Pos.y).x;
+        }
+    }
+    for (int y = 0; y < size.y + 1; y++){
+        for (int x = 0; x < size.x; x++){
+            vec2 Pos = {x * cellsize + cellsize / 2.0f, y * cellsize};
+             Pos = Pos - GetVelocityAtPosition(*this, x * cellsize + cellsize / 2.0f, y * cellsize) * dt;
+            velocitiesY[y * size.x + x] = GetVelocityAtPosition(*this, Pos.x, Pos.y).y;
+        }
+    }
+}
 
 void Cells::MouseVelocityChange(Vector2 mousePos){
     Vector2 mouseDiff = {mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y};
