@@ -1,6 +1,7 @@
 #pragma once
 #include "Cell.hpp"
 #include <iostream>
+#include <algorithm>
 #include <raylib.h>
 
 constexpr Color BLUEGRAY{45, 58, 69, 255};
@@ -17,6 +18,8 @@ class Cells{
     float cellsize;
     float* velocitiesX;
     float* velocitiesY;
+    float* newvelocitiesX;
+    float* newvelocitiesY;
 
     Image cellimage;
     Color* cellimagedata;
@@ -32,6 +35,7 @@ class Cells{
     void UpdateDivergence();
     void UpdateVelocities(float deltaTime);
     void UpdateVelocitiesForDivergence(float deltaTime);
+    vec2 GetVelocityAtPosition(vec2 pos);
     void SetVelocities();
     void MouseVelocityChange(Vector2 mousePos);
     ~Cells();

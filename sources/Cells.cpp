@@ -8,6 +8,8 @@ Cells::Cells(ivec2 Size, float Cellsize){
     cells = new Cell[cellcount];
     velocitiesX = new float[cellcount + size.y];
     velocitiesY = new float[cellcount + size.x];
+    newvelocitiesX = new float[cellcount + size.y];
+    newvelocitiesY = new float[cellcount + size.x];
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
             cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, -2.0f, cellsize);
@@ -25,7 +27,7 @@ Cells::Cells(ivec2 Size, float Cellsize){
 void Cells::SetVelocities(){
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x + 1; x++){
-            velocitiesX[y * (size.x + 1) + x] = GetRandomValue(-1000, 1000) / 1000.0f;
+            velocitiesX[y * (size.x + 1) + x] = GetRandomValue(-1000, 1000) / 100.0f;
             if (x > 0 && cells[y * size.x + x - 1].solid){
                 velocitiesX[y * (size.x + 1) + x] = 0;
                 velocitiesX[y * (size.x + 1) + x - 1] = 0;
@@ -34,7 +36,7 @@ void Cells::SetVelocities(){
     }
     for (int y = 0; y < size.y + 1; y++){
         for (int x = 0; x < size.x; x++){
-            velocitiesY[y * size.x + x] = GetRandomValue(-1000, 1000) / 1000.0f;
+            velocitiesY[y * size.x + x] = GetRandomValue(-1000, 1000) / 100.0f;
             if (y > 0 && cells[(y - 1) * size.x + x].solid){
                 velocitiesY[y * size.x + x] = 0;
                 velocitiesY[(y - 1) * size.x + x - 1] = 0;
@@ -61,15 +63,30 @@ Color PressureToColor(float f){
 }
 
 
+Color VelocityToColor(vec2 vel){
+
+    float f = glm::length(vel) / 5000.0f;
+    float f_inv = 1.0f - f;
+    return {static_cast<unsigned char>(GRAY1.r * f_inv + RED.r * f),
+            static_cast<unsigned char>(GRAY1.g * f_inv + RED.g * f),
+            static_cast<unsigned char>(GRAY1.b * f_inv + RED.b * f),
+            255};
+}
+
+
 void Cells::Draw(){
     const int outline = cellsize / 20.0f;
     DrawRectangle(-outline, -outline, size.x * cellsize + outline * 2, size.y * cellsize + outline * 2, GRAY2);
 
-    for (int i = 0; i < cellcount; i++){   
-        Cell current_cell = cells[i];
-        Color cellcolor = PressureToColor(current_cell.divergence);
-        cellimagedata[i] = cellcolor;
-        //DrawRectangle(current_cell.position.x + outline, current_cell.position.y + outline, cellsize - outline * 2.0f, cellsize - outline * 2.0f, cellcolor);
+    for (int y = 0; y < size.y; y++){
+        for (int x = 0; x < size.x; x++){
+            int i = y * size.x + x;
+            Cell current_cell = cells[i];
+            //Color cellcolor = PressureToColor(current_cell.divergence);
+            Color cellcolor = VelocityToColor(vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f);
+            cellimagedata[i] = cellcolor;
+            //DrawRectangle(current_cell.position.x + outline, current_cell.position.y + outline, cellsize - outline * 2.0f, cellsize - outline * 2.0f, cellcolor);
+        }
     }
 
     UpdateTexture(celltexture, cellimage.data);
@@ -82,7 +99,7 @@ void Cells::Draw(){
             if (cells[y * size.x + x].solid) continue;
             vec2 pos = cells[y * size.x + x].position + vec2(cellsize / 2.0f);
             vec2 arrow = vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f;
-            arrow *= cellsize / 2.0f;
+            arrow /= 30.0f;
             DrawLineEx({pos.x, pos.y}, {pos.x + arrow.x, pos.y + arrow.y}, cellsize / 20.0f, WHITE);
             DrawCircle(pos.x, pos.y, cellsize / 20.0f, WHITE);
         }
@@ -101,6 +118,7 @@ void Cells::Update(float dt, Vector2 mousePos){
     if (IsKeyPressed(KEY_SPACE)) shoulddrawarrow = !shoulddrawarrow;
 }
 
+
 void Cells::UpdateDivergence(){
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
@@ -118,6 +136,8 @@ void Cells::UpdateDivergence(){
         }
     }
 }
+
+
 void Cells::UpdatePressure(float dt){
     if (dt <= 0) return;
     for (int y = 0; y < size.y; y++){
@@ -182,30 +202,131 @@ void Cells::UpdateVelocitiesForDivergence(float deltaTime){
         }
     }
 }
-vec2 GetVelocityAtPosition(Cells& cells, float x, float y){
-    int cellX = static_cast<int>(x / cells.cellsize);
-    int cellY = static_cast<int>(y / cells.cellsize);
-    if (cellX < 0 || cellX >= cells.size.x || cellY < 0 || cellY >= cells.size.y) return {0, 0};
 
-    float velocityX = (cells.velocitiesX[cellY * (cells.size.x + 1) + cellX] + cells.velocitiesX[cellY * (cells.size.x + 1) + cellX + 1]) * 0.5f;
-    float velocityY = (cells.velocitiesY[cellY * cells.size.x + cellX] + cells.velocitiesY[(cellY + 1) * cells.size.x + cellX]) * 0.5f;
+
+vec2 Cells::GetVelocityAtPosition(vec2 pos)
+{
+    // In Grid-Koordinaten umrechnen
+    float gx = pos.x / cellsize;
+    float gy = pos.y / cellsize;
+
+    //
+    // =========================
+    // Sample U (velocitiesX)
+    // =========================
+    // U liegt auf vertikalen Faces:
+    // (x, y + 0.5)
+    //
+
+    float ux = gx;
+    float uy = gy - 0.5f;
+
+    int ux0 = (int)std::floor(ux);
+    int uy0 = (int)std::floor(uy);
+
+    float utx = ux - ux0;
+    float uty = uy - uy0;
+
+    int ux1 = ux0 + 1;
+    int uy1 = uy0 + 1;
+
+    ux0 = std::clamp(ux0, 0, size.x);
+    ux1 = std::clamp(ux1, 0, size.x);
+
+    uy0 = std::clamp(uy0, 0, size.y - 1);
+    uy1 = std::clamp(uy1, 0, size.y - 1);
+
+    float u00 = velocitiesX[uy0 * (size.x + 1) + ux0];
+    float u10 = velocitiesX[uy0 * (size.x + 1) + ux1];
+    float u01 = velocitiesX[uy1 * (size.x + 1) + ux0];
+    float u11 = velocitiesX[uy1 * (size.x + 1) + ux1];
+
+    float velocityX =
+        (1.0f - utx) * (1.0f - uty) * u00 +
+        utx * (1.0f - uty) * u10 +
+        (1.0f - utx) * uty * u01 +
+        utx * uty * u11;
+
+    //
+    // =========================
+    // Sample V (velocitiesY)
+    // =========================
+    // V liegt auf horizontalen Faces:
+    // (x + 0.5, y)
+    //
+
+    float vx = gx - 0.5f;
+    float vy = gy;
+
+    int vx0 = (int)std::floor(vx);
+    int vy0 = (int)std::floor(vy);
+
+    float vtx = vx - vx0;
+    float vty = vy - vy0;
+
+    int vx1 = vx0 + 1;
+    int vy1 = vy0 + 1;
+
+    vx0 = std::clamp(vx0, 0, size.x - 1);
+    vx1 = std::clamp(vx1, 0, size.x - 1);
+
+    vy0 = std::clamp(vy0, 0, size.y);
+    vy1 = std::clamp(vy1, 0, size.y);
+
+    float v00 = velocitiesY[vy0 * size.x + vx0];
+    float v10 = velocitiesY[vy0 * size.x + vx1];
+    float v01 = velocitiesY[vy1 * size.x + vx0];
+    float v11 = velocitiesY[vy1 * size.x + vx1];
+
+    float velocityY =
+        (1.0f - vtx) * (1.0f - vty) * v00 +
+        vtx * (1.0f - vty) * v10 +
+        (1.0f - vtx) * vty * v01 +
+        vtx * vty * v11;
+
+    return { velocityX, velocityY };
+}
+
+/*
+vec2 Cells::GetVelocityAtPosition(vec2 pos){
+    pos /= cellsize;
+    int cellX = static_cast<int>(pos.x);
+    int cellY = static_cast<int>(pos.y);
+
+    double distx = pos.x - cellX;
+    double disty = pos.y - cellY;
+
+    std::cout << distx << std::endl;
+
+    if (cellX < 0 || cellX >= size.x || cellY < 0 || cellY >= size.y) return {0, 0};
+
+    float velocityX = velocitiesX[cellY * (size.x + 1) + cellX] * (1.0 - distx) + velocitiesX[cellY * (size.x + 1) + cellX + 1] * distx;
+    float velocityY = velocitiesY[cellY * size.x + cellX] * (1.0 - disty) + velocitiesY[(cellY + 1) * size.x + cellX] * disty;
     return {velocityX, velocityY};
 }
+*/
+
 void Cells::UpdateVelocities(float dt){
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x + 1; x++){
             vec2 Pos = {x * cellsize, y * cellsize + cellsize / 2.0f};
-             Pos = Pos - GetVelocityAtPosition(*this, x * cellsize, y * cellsize + cellsize / 2.0f) * dt;
-            velocitiesX[y * (size.x + 1) + x] = GetVelocityAtPosition(*this, Pos.x, Pos.y).x;
+            Pos -= GetVelocityAtPosition(Pos) * dt * 10.0f;
+            newvelocitiesX[y * (size.x + 1) + x] = GetVelocityAtPosition(Pos).x;
         }
     }
     for (int y = 0; y < size.y + 1; y++){
         for (int x = 0; x < size.x; x++){
             vec2 Pos = {x * cellsize + cellsize / 2.0f, y * cellsize};
-             Pos = Pos - GetVelocityAtPosition(*this, x * cellsize + cellsize / 2.0f, y * cellsize) * dt;
-            velocitiesY[y * size.x + x] = GetVelocityAtPosition(*this, Pos.x, Pos.y).y;
+            Pos -= GetVelocityAtPosition(Pos) * dt * 10.0f;
+            newvelocitiesY[y * size.x + x] = GetVelocityAtPosition(Pos).y;
         }
     }
+    float* temp = velocitiesX;
+    velocitiesX = newvelocitiesX;
+    newvelocitiesX = temp;
+    temp = velocitiesY;
+    velocitiesY = newvelocitiesY;
+    newvelocitiesY = temp;
 }
 
 void Cells::MouseVelocityChange(Vector2 mousePos){
@@ -213,8 +334,8 @@ void Cells::MouseVelocityChange(Vector2 mousePos){
     lastMousePos = mousePos;
 
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) return;
-    constexpr float brushsize = 100.0f;
-    constexpr float brushstrength = 0.01f;
+    constexpr float brushsize = 150.0f;
+    constexpr float brushstrength = 30.0f;
 
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x + 1; x++){
@@ -232,7 +353,7 @@ void Cells::MouseVelocityChange(Vector2 mousePos){
             Vector2 dist = {pos.x - mousePos.x, pos.y - mousePos.y};
             float r = glm::sqrt(dist.x * dist.x + dist.y * dist.y);
             if (r <= brushsize){
-                velocitiesY[y * size.x + x] += mouseDiff.y * brushstrength / r;
+                velocitiesY[y * size.x + x] += mouseDiff.y * brushstrength * ((brushsize - r) / brushsize);
             }
         }
     }
