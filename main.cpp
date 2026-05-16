@@ -1,8 +1,8 @@
 #include "Scene.hpp"
 #include <chrono>
 
-#define startHeight 900
-#define startWidth 900
+#define startHeight 1080
+#define startWidth 1920
 #define framerate 60
 #define secondsperprint 2
 
@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     SetTargetFPS(framerate);
     SetExitKey(KEY_NULL);
 
-    scene.CreateCells(ivec2(100, 60), 40);
+    scene.CreateCells(ivec2(100, 50), 40);
 
     unsigned long int framecounter = 1, drawtime = 0, updatetime = 0;
 
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
         scene.CameraUpdate();
 
         auto startupdate = std::chrono::system_clock::now();
-        scene.Update(dt);
+        scene.Update(dt/10);
         updatetime += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - startupdate).count();
 
         BeginDrawing();
