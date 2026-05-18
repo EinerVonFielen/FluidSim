@@ -123,10 +123,15 @@ void Cells::Update(float dt, Vector2 mousePos){
     for (int i = 0; i < 80; i++){
         UpdatePressure(dt);
     }
-    UpdateVelocitiesForDivergence(dt);
+    ApplyPressure(dt);
     UpdateDivergence();
-    MouseVelocityChange(mousePos);
 
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+        MouseVelocityChange(mousePos);
+        MouseSolid(mousePos);
+    }
+
+    ChangeBrush();
     if (IsKeyPressed(KEY_SPACE)) shoulddrawarrow = !shoulddrawarrow;
     drawbrushtimer -= dt;
     lastMousePos = mousePos;
@@ -200,7 +205,7 @@ void Cells::UpdatePressure(float dt){
     }
 }
 
-void Cells::UpdateVelocitiesForDivergence(float deltaTime){
+void Cells::ApplyPressure(float deltaTime){
     for (int y = 0; y < size.y ; y++){
         for (int x = 1; x < size.x; x++){
             float pressure_difference_x = cells[y * size.x + x].pressure - cells[y * size.x + x - 1].pressure;
@@ -326,8 +331,9 @@ void Cells::UpdateVelocities(float dt){
     newvelocitiesY = temp;
 }
 
+
 void Cells::MouseVelocityChange(Vector2 mousePos){
-    if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) return;
+    if (selectedbrush != 3) return;
     Vector2 mouseDiff = {mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y};
     constexpr float brushstrength = 20.0f;
 
@@ -354,6 +360,28 @@ void Cells::MouseVelocityChange(Vector2 mousePos){
 }
 
 
+void Cells::MouseSolid(Vector2 mousePos){
+    if (!(selectedbrush == 1 || selectedbrush == 2)) return;
+    if (mousePos.x < 0 || mousePos.y < 0 || mousePos.x > cellsize * size.x || mousePos.y > cellsize * size.y) return;
+    int cellbrushsize = static_cast<int>(brushsize / cellsize);
+    ivec2 mousepos = ivec2(static_cast<int>(mousePos.x / cellsize), static_cast<int>(mousePos.y / cellsize));
+
+    int xmin = glm::max(0, mousepos.x - cellbrushsize);
+    int xmax = glm::min(size.x, mousepos.x + cellbrushsize + 1);
+    int ymin = glm::max(0, mousepos.y - cellbrushsize);
+    int ymax = glm::min(size.y, mousepos.y + cellbrushsize + 1);
+
+    for (int x = xmin; x < xmax; x++){
+        int heightlimit = static_cast<int>(glm::sqrt(cellbrushsize * cellbrushsize - (x - mousepos.x) * (x - mousepos.x)));
+        int newymin = glm::max(ymin, mousepos.y - heightlimit);
+        int newymax = glm::min(ymax, mousepos.y + heightlimit + 1);
+        for (int y = newymin; y < newymax; y++){
+            cells[y * size.x + x].solid = static_cast<bool>(selectedbrush - 1);
+        }
+    }
+}
+
+
 void Cells::DrawMouseCircle(){ 
     if (IsKeyDown(KEY_LEFT_SHIFT)){
         brushsize *= GetMouseWheelMove() * 0.1f + 1.0f;
@@ -364,6 +392,17 @@ void Cells::DrawMouseCircle(){
     if (drawbrushtimer >= 0.0f){
         DrawCircle(lastMousePos.x, lastMousePos.y, brushsize, {255, 255, 255, static_cast<unsigned char>(150 * drawbrushtimer)});
     }
+}
+
+
+void Cells::ChangeBrush(){
+    for (int i = 1; i <= 5; i++){
+        if (IsKeyPressed(KEY_ONE + i - 1)){
+            selectedbrush = i;
+            break;
+        }
+    }
+    
 }
 
 

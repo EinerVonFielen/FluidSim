@@ -30,6 +30,7 @@ class Cells{
 
     float brushsize;
     float drawbrushtimer = 0;
+    int selectedbrush = 1;
 
     Cells(ivec2 size, float cellsize);
     void Draw();
@@ -37,10 +38,12 @@ class Cells{
     void UpdatePressure(float deltaTime);
     void UpdateDivergence();
     void UpdateVelocities(float deltaTime);
-    void UpdateVelocitiesForDivergence(float deltaTime);
+    void ApplyPressure(float deltaTime);
     vec2 GetVelocityAtPosition(vec2 pos);
     void SetVelocities();
     void MouseVelocityChange(Vector2 mousePos);
+    void MouseSolid(Vector2 mousePos);
     void DrawMouseCircle();
+    void ChangeBrush();
     ~Cells();
 };
