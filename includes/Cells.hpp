@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include <raylib.h>
+#include <execution>
 
 constexpr Color BLUEGRAY{45, 58, 69, 255};
 constexpr Color GRAY1{44, 48, 51, 255};
@@ -20,6 +21,8 @@ class Cells{
     float* velocitiesY;
     float* newvelocitiesX;
     float* newvelocitiesY;
+    
+    std::vector<std::pair<uint32_t, uint32_t>> m_CheckerEven, m_CheckerOdd;
 
     Image cellimage;
     Color* cellimagedata;
@@ -37,7 +40,8 @@ class Cells{
     Cells(ivec2 size, float cellsize);
     void Draw();
     void Update(float dt, Vector2 mousePos);
-    void UpdatePressure(float deltaTime);
+    void UpdatePressureWrapper(float);
+    void UpdatePressure(float, uint32_t, uint32_t);
     void UpdateDivergence();
     void UpdateVelocities(float deltaTime);
     void ApplyPressure(float deltaTime);

@@ -1,5 +1,5 @@
 CXX       := /usr/bin/g++
-CXX_FLAGS := -std=c++17 -Wextra -Wpedantic -g -O3 -march=native -ffast-math# -fsanitize=address -g #-Wall
+CXX_FLAGS := -std=c++17 -Wextra -Wpedantic -g -O3 -march=native -ffast-math -ltbb# -fsanitize=address -g #-Wall
 RAYLIB_LDFLAGS := $(shell pkg-config --libs raylib)
 RAYLIB_CFLAGS := $(shell pkg-config --cflags raylib)
 

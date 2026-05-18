@@ -3,7 +3,7 @@
 
 #define startHeight 1080
 #define startWidth 1920
-#define framerate 60
+#define framerate 0
 #define secondsperprint 2
 
 Scene scene = Scene(vec2(startWidth, startHeight));
@@ -16,8 +16,8 @@ int main(int argc, char* argv[]) {
     SetTargetFPS(framerate);
     SetExitKey(KEY_NULL);
 
-    scene.CreateCells(ivec2(320, 180), 40);
-
+    scene.CreateCells(ivec2(500, 500), 40);
+    
     unsigned long int framecounter = 1, drawtime = 0, updatetime = 0;
 
     while(!WindowShouldClose()){

@@ -1,4 +1,5 @@
 #include "Cells.hpp"
+#include <cstdint>
 #include <iostream>
 
 
@@ -22,6 +23,14 @@ Cells::Cells(ivec2 Size, float Cellsize){
     cellimage = GenImageColor(size.x, size.y, WHITE);
     cellimagedata = (Color*) cellimage.data;
     celltexture = LoadTextureFromImage(cellimage);
+    
+    // Init chess board indecies
+    // 
+    for (int y = 0; y < size.y; y++) {
+        for (int x = 0; x < size.x; x++) {
+            ((x + y) % 2 == 0 ? m_CheckerEven : m_CheckerOdd).emplace_back(x, y);
+        }
+    }
 }
 
 
@@ -150,7 +159,7 @@ void Cells::Draw(){
 void Cells::Update(float dt, Vector2 mousePos){
     UpdateVelocities(dt);
     for (int i = 0; i < 80; i++){
-        UpdatePressure(dt);
+        UpdatePressureWrapper(dt);
     }
     ApplyPressure(dt);
     UpdateDivergence();
@@ -186,52 +195,67 @@ void Cells::UpdateDivergence(){
 }
 
 
-void Cells::UpdatePressure(float dt){
-    if (dt <= 0) return;
-    for (int y = 0; y < size.y; y++){
-        for (int x = 0; x < size.x; x++){
-            int current_index = y * size.x + x;
-            Cell& current_cell = cells[current_index];
+void Cells::UpdatePressure(float dt, uint32_t x, uint32_t y){
+    
+    int current_index = y * size.x + x;
+    Cell& current_cell = cells[current_index];
 
-            if (current_cell.solid){
-                current_cell.pressure = 0;
-                continue;
-            }
-
-            // Update pressure based on neighboring cells
-            float pressure_sum = 0.0f;
-            float velocity_difference_x = 0.0f;
-            float velocity_difference_y = 0.0f;
-            int neighbor_count = 0;
-
-            // Check neighbors (up, down, left, right)
-            //Left
-            if (x > 0 && !cells[current_index - 1].solid) {
-                pressure_sum += cells[current_index - 1].pressure;
-                neighbor_count++;
-                velocity_difference_x -= velocitiesX[current_index + y];
-            }
-            //Right
-            if (x < size.x - 1 && !cells[current_index + 1].solid) {
-                pressure_sum += cells[current_index + 1].pressure;
-                neighbor_count++;
-                velocity_difference_x += velocitiesX[current_index + 1 + y];
-            }
-            //Up
-            if (y > 0 && !cells[current_index - size.x].solid) {
-                pressure_sum += cells[current_index - size.x].pressure;
-                neighbor_count++;
-                velocity_difference_y -= velocitiesY[current_index];
-            }
-            //Down
-            if (y < size.y - 1 && ! cells[current_index + size.x].solid) {
-                pressure_sum += cells[current_index + size.x].pressure;
-                neighbor_count++;
-                velocity_difference_y += velocitiesY[current_index + size.x];
-            }
-            current_cell.pressure = pressure_sum / neighbor_count - (cellsize * (velocity_difference_x + velocity_difference_y)) / (neighbor_count * dt);
-        }
+    if (current_cell.solid){
+        current_cell.pressure = 0;
+        return;
     }
+
+    // Update pressure based on neighboring cells
+    float pressure_sum = 0.0f;
+    float velocity_difference_x = 0.0f;
+    float velocity_difference_y = 0.0f;
+    int neighbor_count = 0;
+
+    // Check neighbors (up, down, left, right)
+    //Left
+    if (x > 0 && !cells[current_index - 1].solid) {
+        pressure_sum += cells[current_index - 1].pressure;
+        neighbor_count++;
+        velocity_difference_x -= velocitiesX[current_index + y];
+    }
+    //Right
+    if (x < size.x - 1 && !cells[current_index + 1].solid) {
+        pressure_sum += cells[current_index + 1].pressure;
+        neighbor_count++;
+        velocity_difference_x += velocitiesX[current_index + 1 + y];
+    }
+    //Up
+    if (y > 0 && !cells[current_index - size.x].solid) {
+        pressure_sum += cells[current_index - size.x].pressure;
+        neighbor_count++;
+        velocity_difference_y -= velocitiesY[current_index];
+    }
+    //Down
+    if (y < size.y - 1 && ! cells[current_index + size.x].solid) {
+        pressure_sum += cells[current_index + size.x].pressure;
+        neighbor_count++;
+        velocity_difference_y += velocitiesY[current_index + size.x];
+    }
+    current_cell.pressure = pressure_sum / neighbor_count - (cellsize * (velocity_difference_x + velocity_difference_y)) / (neighbor_count * dt);
+}
+
+
+
+void Cells::UpdatePressureWrapper(float dt){
+    if (dt <= 0) return;
+    
+    //	std::for_each(std::execution::par_unseq, 0, size.x, [this](uint32_t y){
+    //  std::for_each(std::execution::par_unseq, 0, size.y, [this, y](uint32_t x){
+    
+    
+    
+    std::for_each(std::execution::par_unseq, m_CheckerEven.begin(), m_CheckerEven.end(), [this, dt](std::pair<uint32_t, uint32_t> pixel) {
+            UpdatePressure(dt, pixel.first, pixel.second);
+    });
+    
+    std::for_each(std::execution::par_unseq, m_CheckerOdd.begin(), m_CheckerOdd.end(), [this, dt](std::pair<uint32_t, uint32_t> pixel) {
+            UpdatePressure(dt, pixel.first, pixel.second);
+    });
 }
 
 void Cells::ApplyPressure(float deltaTime){
