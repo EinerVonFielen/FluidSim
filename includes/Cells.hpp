@@ -30,7 +30,9 @@ class Cells{
 
     float brushsize;
     float drawbrushtimer = 0;
+
     int selectedbrush = 1;
+    int selectedoverlay = 6;
 
     Cells(ivec2 size, float cellsize);
     void Draw();

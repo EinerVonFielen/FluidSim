@@ -59,7 +59,24 @@ Color PressureToColor(float f){
         secondary = RED;
     }
     //std::cout << f << std::endl;
-    f = f / 500000.0f;
+    constexpr float maxvalue = 10000000.0f;
+    f = glm::abs(glm::clamp(f, -maxvalue, maxvalue)) / maxvalue;
+    float f_inv = 1.0f - f;
+    return {static_cast<unsigned char>(GRAY1.r * f_inv + secondary.r * f),
+            static_cast<unsigned char>(GRAY1.g * f_inv + secondary.g * f),
+            static_cast<unsigned char>(GRAY1.b * f_inv + secondary.b * f),
+            255};
+}
+
+
+Color DivergenceToColor(float f){
+    Color secondary;
+    if (f < 0){
+        secondary = BLUE;
+    } else {
+        secondary = RED;
+    }
+    //std::cout << f << std::endl;
     constexpr float maxvalue = 10.0f;
     f = glm::abs(glm::clamp(f, -maxvalue, maxvalue)) / maxvalue;
     float f_inv = 1.0f - f;
@@ -90,10 +107,22 @@ void Cells::Draw(){
         for (int x = 0; x < size.x; x++){
             int i = y * size.x + x;
             Cell current_cell = cells[i];
-            //Color cellcolor = PressureToColor(current_cell.pressure);
-            Color cellcolor = VelocityToColor(vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f);
+            Color cellcolor;
+            switch(selectedoverlay){
+                case 6:
+                    cellcolor = PressureToColor(current_cell.pressure);
+                    break;
+                case 7:
+                    cellcolor = VelocityToColor(vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f);
+                    break;
+                case 8:
+                    cellcolor = DivergenceToColor(current_cell.divergence);
+                    break;
+                default:
+                    cellcolor = GRAY1;
+                
+            }
             cellimagedata[i] = cellcolor;
-            //DrawRectangle(current_cell.position.x + outline, current_cell.position.y + outline, cellsize - outline * 2.0f, cellsize - outline * 2.0f, cellcolor);
         }
     }
 
@@ -402,7 +431,12 @@ void Cells::ChangeBrush(){
             break;
         }
     }
-    
+    for (int i = 6; i <= 9; i++){
+        if (IsKeyPressed(KEY_ONE + i - 1)){
+            selectedoverlay = i;
+            break;
+        }
+    }
 }
 
 
