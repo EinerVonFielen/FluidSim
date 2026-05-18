@@ -15,22 +15,14 @@ Cells::Cells(ivec2 Size, float Cellsize){
     newvelocitiesY = new float[cellcount + size.x];
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
-            cells[y * size.x + x] = Cell(vec2(x, y) * cellsize, -2.0f, cellsize);
-            if (x == 0 || x == size.x - 1 || y == 0 || y == size.y - 1) cells[y * size.x + x].solid = true;
+            cells[y * size.x + x] = Cell(0.0f);
+            if (x == 0 || x == size.x - 1 || y == 0 || y == size.y - 1) cells[y * size.x + x].notsolid = false;
         }
     }
     SetVelocities();
     cellimage = GenImageColor(size.x, size.y, WHITE);
     cellimagedata = (Color*) cellimage.data;
     celltexture = LoadTextureFromImage(cellimage);
-    
-    // Init chess board indecies
-    // 
-    for (int y = 0; y < size.y; y++) {
-        for (int x = 0; x < size.x; x++) {
-            ((x + y) % 2 == 0 ? m_CheckerEven : m_CheckerOdd).emplace_back(x, y);
-        }
-    }
 }
 
 
@@ -41,7 +33,7 @@ void Cells::SetVelocities(){
             //velocitiesX[y * (size.x + 1) + x] = GetRandomValue(-1000, 1000) / 100.0f;
             velocitiesX[y * (size.x + 1) + x] = 0;
            
-            if (x > 0 && cells[y * size.x + x - 1].solid){
+            if (x > 0 && !cells[y * size.x + x - 1].notsolid){
                 velocitiesX[y * (size.x + 1) + x] = 0;
                 velocitiesX[y * (size.x + 1) + x - 1] = 0;
             }
@@ -51,7 +43,7 @@ void Cells::SetVelocities(){
         for (int x = 0; x < size.x; x++){
             //velocitiesY[y * size.x + x] = GetRandomValue(-1000, 1000) / 100.0f;
             velocitiesY[y * size.x + x] = 0;
-            if (y > 0 && cells[(y - 1) * size.x + x].solid){
+            if (y > 0 && !cells[(y - 1) * size.x + x].notsolid){
                 velocitiesY[y * size.x + x] = 0;
                 velocitiesY[(y - 1) * size.x + x - 1] = 0;
             }
@@ -125,7 +117,7 @@ void Cells::Draw(){
                     cellcolor = VelocityToColor(vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f);
                     break;
                 case 8:
-                    cellcolor = DivergenceToColor(current_cell.divergence);
+                    cellcolor = DivergenceToColor(GetDivergence(ivec2(x, y)));
                     break;
                 default:
                     cellcolor = GRAY1;
@@ -142,8 +134,8 @@ void Cells::Draw(){
     if (shoulddrawarrow){
         for (int y = 0; y < size.y; y++){
             for (int x = 0; x < size.x; x++){
-                if (cells[y * size.x + x].solid) continue;
-                vec2 pos = cells[y * size.x + x].position + vec2(cellsize / 2.0f);
+                if (!cells[y * size.x + x].notsolid) continue;
+                vec2 pos = vec2(x, y) * cellsize + vec2(cellsize / 2.0f);
                 vec2 arrow = vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f;
                 arrow /= 30.0f;
                 DrawLineEx({pos.x, pos.y}, {pos.x + arrow.x, pos.y + arrow.y}, cellsize / 20.0f, WHITE);
@@ -157,12 +149,12 @@ void Cells::Draw(){
 
 
 void Cells::Update(float dt, Vector2 mousePos){
+    if (dt <= 0) return;
     UpdateVelocities(dt);
     for (int i = 0; i < 80; i++){
         UpdatePressureWrapper(dt);
     }
     ApplyPressure(dt);
-    UpdateDivergence();
 
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
         MouseVelocityChange(mousePos);
@@ -176,31 +168,26 @@ void Cells::Update(float dt, Vector2 mousePos){
 }
 
 
-void Cells::UpdateDivergence(){
-    for (int y = 0; y < size.y; y++){
-        for (int x = 0; x < size.x; x++){
-            int current_index = y * size.x + x;
-            Cell& current_cell = cells[current_index];
-            if (current_cell.solid){
-                current_cell.divergence = 0;
-                continue;
-            }
-            float velocityXLeft = velocitiesX[y * (size.x + 1) + x];
-            float velocityXRight = velocitiesX[y * (size.x + 1) + x + 1];
-            float velocityYUp = velocitiesY[y * size.x + x];
-            float velocityYDown = velocitiesY[(y + 1) * size.x + x];
-            current_cell.divergence = (velocityXRight - velocityXLeft + velocityYDown - velocityYUp) / cellsize;
-        }
+float Cells::GetDivergence(ivec2 pos){
+    int current_index = pos.y * size.x + pos.x;
+    Cell& current_cell = cells[current_index];
+    if (!current_cell.notsolid){
+        return 0;
     }
+    float velocityXLeft = velocitiesX[pos.y * (size.x + 1) + pos.x];
+    float velocityXRight = velocitiesX[pos.y * (size.x + 1) + pos.x + 1];
+    float velocityYUp = velocitiesY[pos.y * size.x + pos.x];
+    float velocityYDown = velocitiesY[(pos.y + 1) * size.x + pos.x];
+    return (velocityXRight - velocityXLeft + velocityYDown - velocityYUp) / cellsize;
 }
 
 
-void Cells::UpdatePressure(float dt, uint32_t x, uint32_t y){
+void Cells::UpdatePressure(float dt, int x, int y){
     
     int current_index = y * size.x + x;
     Cell& current_cell = cells[current_index];
 
-    if (current_cell.solid){
+    if (!current_cell.notsolid){
         current_cell.pressure = 0;
         return;
     }
@@ -213,49 +200,141 @@ void Cells::UpdatePressure(float dt, uint32_t x, uint32_t y){
 
     // Check neighbors (up, down, left, right)
     //Left
-    if (x > 0 && !cells[current_index - 1].solid) {
+    if (x > 0 && cells[current_index - 1].notsolid) {
         pressure_sum += cells[current_index - 1].pressure;
         neighbor_count++;
         velocity_difference_x -= velocitiesX[current_index + y];
     }
     //Right
-    if (x < size.x - 1 && !cells[current_index + 1].solid) {
+    if (x < size.x - 1 && cells[current_index + 1].notsolid) {
         pressure_sum += cells[current_index + 1].pressure;
         neighbor_count++;
         velocity_difference_x += velocitiesX[current_index + 1 + y];
     }
     //Up
-    if (y > 0 && !cells[current_index - size.x].solid) {
+    if (y > 0 && cells[current_index - size.x].notsolid) {
         pressure_sum += cells[current_index - size.x].pressure;
         neighbor_count++;
         velocity_difference_y -= velocitiesY[current_index];
     }
     //Down
-    if (y < size.y - 1 && ! cells[current_index + size.x].solid) {
+    if (y < size.y - 1 && cells[current_index + size.x].notsolid) {
         pressure_sum += cells[current_index + size.x].pressure;
         neighbor_count++;
         velocity_difference_y += velocitiesY[current_index + size.x];
+    }
+    if (neighbor_count == 0){
+        current_cell.pressure = 0;
+        return;
     }
     current_cell.pressure = pressure_sum / neighbor_count - (cellsize * (velocity_difference_x + velocity_difference_y)) / (neighbor_count * dt);
 }
 
 
+void Cells::UpdatePressureEdge(float dt, bool odd){
+    
+    bool isxeven = (size.x % 2) == 0;
+    bool isyeven = (size.y % 2) == 0;
 
-void Cells::UpdatePressureWrapper(float dt){
-    if (dt <= 0) return;
+    for (int x = odd; x < size.x; x += 2){
+        UpdatePressure(dt, x, 0);
+    }
+    for (int x = isyeven ? !odd : odd; x < size.x; x += 2){
+        UpdatePressure(dt, x, size.y - 1);
+    }
+    for (int y = 1 + !odd; y < size.y - 1; y += 2){
+        UpdatePressure(dt, 0, y);
+    }
+    for (int y = isxeven ? 1 + odd : 1 + !odd; y < size.y - 1; y += 2){
+        UpdatePressure(dt, size.x - 1, y);
+    }
+}
+
+
+void Cells::UpdatePressureMid(float dt, int start, int end, bool even){
     
-    //	std::for_each(std::execution::par_unseq, 0, size.x, [this](uint32_t y){
-    //  std::for_each(std::execution::par_unseq, 0, size.y, [this, y](uint32_t x){
+    for (int y = start; y < end; y++){
+        for (int x = (y + even) % 2 + 1; x < size.x - 1; x += 2){
+            int current_index = y * size.x + x;
+            Cell& current_cell = cells[current_index];
+
+            if (!current_cell.notsolid){
+                current_cell.pressure = 0;
+                continue;
+            }
+        
+            // Update pressure based on neighboring cells
+            float pressure_sum = 0.0f;
+            float velocity_difference_x = 0.0f;
+            float velocity_difference_y = 0.0f;
+            int neighbor_count = 0;
+        
+            // Check neighbors (up, down, left, right)
+            //Left
+            int valid;
+            valid = cells[current_index - 1].notsolid;
+            pressure_sum += cells[current_index - 1].pressure;
+            neighbor_count += valid;
+            velocity_difference_x -= velocitiesX[current_index + y] * valid;
+            
+            //Right
+            valid = cells[current_index + 1].notsolid;
+            pressure_sum += cells[current_index + 1].pressure;
+            neighbor_count += valid;
+            velocity_difference_x += velocitiesX[current_index + 1 + y] * valid;
+            
+            //Up
+            valid = cells[current_index - size.x].notsolid;
+            pressure_sum += cells[current_index - size.x].pressure;
+            neighbor_count += valid;
+            velocity_difference_y -= velocitiesY[current_index] * valid;
+            
+            //Down
+            valid = cells[current_index + size.x].notsolid;
+            pressure_sum += cells[current_index + size.x].pressure;
+            neighbor_count += valid;
+            velocity_difference_y += velocitiesY[current_index + size.x] * valid;
+            
+            if (neighbor_count == 0){
+                current_cell.pressure = 0;
+                continue;
+            }
+            current_cell.pressure = pressure_sum / neighbor_count - (cellsize * (velocity_difference_x + velocity_difference_y)) / (neighbor_count * dt);
+        }
+    }
+}
+
+
+
+void Cells::UpdatePressureWrapper(float dt){    
     
-    
-    
-    std::for_each(std::execution::par_unseq, m_CheckerEven.begin(), m_CheckerEven.end(), [this, dt](std::pair<uint32_t, uint32_t> pixel) {
-            UpdatePressure(dt, pixel.first, pixel.second);
-    });
-    
-    std::for_each(std::execution::par_unseq, m_CheckerOdd.begin(), m_CheckerOdd.end(), [this, dt](std::pair<uint32_t, uint32_t> pixel) {
-            UpdatePressure(dt, pixel.first, pixel.second);
-    });
+    const int numThreads = 6;
+    int sizePerThread = static_cast<int>(size.y / numThreads);
+
+    std::vector<std::thread> threads;
+
+    for (int t = 0; t < numThreads; t++) {
+        int start = t * sizePerThread;
+        int end = (t == numThreads - 1) ? size.y : start + sizePerThread;
+        threads.emplace_back(&Cells::UpdatePressureMid, this, dt, start, end, true);
+    }
+    threads.emplace_back(&Cells::UpdatePressureEdge, this, dt, false);
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+    threads.clear();
+
+    for (int t = 0; t < numThreads; t++) {
+        int start = t * sizePerThread;
+        int end = (t == numThreads - 1) ? size.y : start + sizePerThread;
+        threads.emplace_back(&Cells::UpdatePressureMid, this, dt, start, end, false);
+    }
+    threads.emplace_back(&Cells::UpdatePressureEdge, this, dt, true);
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
 }
 
 void Cells::ApplyPressure(float deltaTime){
@@ -263,14 +342,14 @@ void Cells::ApplyPressure(float deltaTime){
         for (int x = 1; x < size.x; x++){
             float pressure_difference_x = cells[y * size.x + x].pressure - cells[y * size.x + x - 1].pressure;
             velocitiesX[y * (size.x + 1) + x] -= pressure_difference_x * deltaTime / cellsize;
-            velocitiesX[y * (size.x + 1) + x] *= !(cells[y * size.x + x].solid || cells[y * size.x + x - 1].solid);
+            velocitiesX[y * (size.x + 1) + x] *= (cells[y * size.x + x].notsolid && cells[y * size.x + x - 1].notsolid);
         }
     }
     for (int y = 1; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
             float pressure_difference_y = cells[y * size.x + x].pressure - cells[(y - 1) * size.x + x].pressure;
             velocitiesY[y * size.x + x] -= pressure_difference_y * deltaTime / cellsize;
-            velocitiesY[y * size.x + x] *= !(cells[y * size.x + x].solid || cells[(y - 1) * size.x + x].solid);
+            velocitiesY[y * size.x + x] *= (cells[y * size.x + x].notsolid && cells[(y - 1) * size.x + x].notsolid);
         }
     }
 }
@@ -429,7 +508,8 @@ void Cells::MouseSolid(Vector2 mousePos){
         int newymin = glm::max(ymin, mousepos.y - heightlimit);
         int newymax = glm::min(ymax, mousepos.y + heightlimit + 1);
         for (int y = newymin; y < newymax; y++){
-            cells[y * size.x + x].solid = static_cast<bool>(selectedbrush - 1);
+            cells[y * size.x + x].notsolid = static_cast<bool>(selectedbrush - 1);
+            cells[y * size.x + x].pressure = 0;
         }
     }
 }

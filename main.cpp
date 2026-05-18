@@ -3,8 +3,8 @@
 
 #define startHeight 1080
 #define startWidth 1920
-#define framerate 0
-#define secondsperprint 2
+#define framerate 120
+#define secondsperprint 1
 
 Scene scene = Scene(vec2(startWidth, startHeight));
 
