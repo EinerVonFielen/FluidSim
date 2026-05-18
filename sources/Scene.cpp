@@ -23,7 +23,7 @@ void Scene::CameraUpdate(){
     Vector2 mouseWorldPosBefore = GetScreenToWorld2D(GetMousePosition(), camera);
 
     float wheel = GetMouseWheelMove();
-    if (wheel != 0){
+    if (wheel != 0 && !IsKeyDown(KEY_LEFT_SHIFT)){
         camera.zoom = expf(logf(camera.zoom) + wheel * 0.1f);
         Vector2 mouseWorldPosAfter = GetScreenToWorld2D(GetMousePosition(), camera);
 

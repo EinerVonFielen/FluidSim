@@ -26,7 +26,10 @@ class Cells{
     Texture2D celltexture;
 
     Vector2 lastMousePos = {-1, -1};
-    bool shoulddrawarrow = true;
+    bool shoulddrawarrow = false;
+
+    float brushsize;
+    float drawbrushtimer = 0;
 
     Cells(ivec2 size, float cellsize);
     void Draw();
@@ -38,5 +41,6 @@ class Cells{
     vec2 GetVelocityAtPosition(vec2 pos);
     void SetVelocities();
     void MouseVelocityChange(Vector2 mousePos);
+    void DrawMouseCircle();
     ~Cells();
 };

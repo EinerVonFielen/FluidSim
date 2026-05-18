@@ -5,6 +5,7 @@
 Cells::Cells(ivec2 Size, float Cellsize){
     size = Size;
     cellsize = Cellsize;
+    brushsize = 5 * cellsize;
     cellcount = size.x * size.y;
     cells = new Cell[cellcount];
     velocitiesX = new float[cellcount + size.y];
@@ -71,7 +72,8 @@ Color PressureToColor(float f){
 
 Color VelocityToColor(vec2 vel){
 
-    float f = glm::length(vel) / 5000.0f;
+    float f = glm::length(vel) / 15000.0f;
+    f = glm::min(f, 1.0f);
     float f_inv = 1.0f - f;
     return {static_cast<unsigned char>(GRAY1.r * f_inv + RED.r * f),
             static_cast<unsigned char>(GRAY1.g * f_inv + RED.g * f),
@@ -88,8 +90,8 @@ void Cells::Draw(){
         for (int x = 0; x < size.x; x++){
             int i = y * size.x + x;
             Cell current_cell = cells[i];
-            Color cellcolor = PressureToColor(current_cell.pressure);
-            //Color cellcolor = VelocityToColor(vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f);
+            //Color cellcolor = PressureToColor(current_cell.pressure);
+            Color cellcolor = VelocityToColor(vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f);
             cellimagedata[i] = cellcolor;
             //DrawRectangle(current_cell.position.x + outline, current_cell.position.y + outline, cellsize - outline * 2.0f, cellsize - outline * 2.0f, cellcolor);
         }
@@ -99,29 +101,35 @@ void Cells::Draw(){
     DrawTextureEx(celltexture, {0, 0}, 0, cellsize, WHITE);
 
 
-    if (!shoulddrawarrow) return;
-    for (int y = 0; y < size.y; y++){
-        for (int x = 0; x < size.x; x++){
-            if (cells[y * size.x + x].solid) continue;
-            vec2 pos = cells[y * size.x + x].position + vec2(cellsize / 2.0f);
-            vec2 arrow = vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f;
-            arrow /= 30.0f;
-            DrawLineEx({pos.x, pos.y}, {pos.x + arrow.x, pos.y + arrow.y}, cellsize / 20.0f, WHITE);
-            DrawCircle(pos.x, pos.y, cellsize / 20.0f, WHITE);
+    if (shoulddrawarrow){
+        for (int y = 0; y < size.y; y++){
+            for (int x = 0; x < size.x; x++){
+                if (cells[y * size.x + x].solid) continue;
+                vec2 pos = cells[y * size.x + x].position + vec2(cellsize / 2.0f);
+                vec2 arrow = vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f;
+                arrow /= 30.0f;
+                DrawLineEx({pos.x, pos.y}, {pos.x + arrow.x, pos.y + arrow.y}, cellsize / 20.0f, WHITE);
+                DrawCircle(pos.x, pos.y, cellsize / 20.0f, WHITE);
+            }
         }
     }
+
+    DrawMouseCircle();
 }
 
 
 void Cells::Update(float dt, Vector2 mousePos){
     UpdateVelocities(dt);
-    for (int i = 0; i < 50; i++){
+    for (int i = 0; i < 80; i++){
         UpdatePressure(dt);
     }
     UpdateVelocitiesForDivergence(dt);
     UpdateDivergence();
     MouseVelocityChange(mousePos);
+
     if (IsKeyPressed(KEY_SPACE)) shoulddrawarrow = !shoulddrawarrow;
+    drawbrushtimer -= dt;
+    lastMousePos = mousePos;
 }
 
 
@@ -299,14 +307,14 @@ void Cells::UpdateVelocities(float dt){
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x + 1; x++){
             vec2 Pos = {x * cellsize, y * cellsize + cellsize / 2.0f};
-            Pos -= GetVelocityAtPosition(Pos) * dt * (cellsize / 4);
+            Pos -= GetVelocityAtPosition(Pos) * dt;
             newvelocitiesX[y * (size.x + 1) + x] = GetVelocityAtPosition(Pos).x;
         }
     }
     for (int y = 0; y < size.y + 1; y++){
         for (int x = 0; x < size.x; x++){
             vec2 Pos = {x * cellsize + cellsize / 2.0f, y * cellsize};
-            Pos -= GetVelocityAtPosition(Pos) * dt * (cellsize / 4);
+            Pos -= GetVelocityAtPosition(Pos) * dt;
             newvelocitiesY[y * size.x + x] = GetVelocityAtPosition(Pos).y;
         }
     }
@@ -319,11 +327,9 @@ void Cells::UpdateVelocities(float dt){
 }
 
 void Cells::MouseVelocityChange(Vector2 mousePos){
-    Vector2 mouseDiff = {mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y};
-    lastMousePos = mousePos;
     if (!IsMouseButtonDown(MOUSE_BUTTON_LEFT)) return;
-    constexpr float brushsize = 150.0f;
-    constexpr float brushstrength = 5.0f;
+    Vector2 mouseDiff = {mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y};
+    constexpr float brushstrength = 20.0f;
 
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x + 1; x++){
@@ -344,6 +350,19 @@ void Cells::MouseVelocityChange(Vector2 mousePos){
                 velocitiesY[y * size.x + x] += mouseDiff.y * brushstrength * ((brushsize - r) / brushsize);
             }
         }
+    }
+}
+
+
+void Cells::DrawMouseCircle(){ 
+    if (IsKeyDown(KEY_LEFT_SHIFT)){
+        brushsize *= GetMouseWheelMove() * 0.1f + 1.0f;
+        drawbrushtimer = 0.3f;
+    }
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) drawbrushtimer = 0.5f;
+
+    if (drawbrushtimer >= 0.0f){
+        DrawCircle(lastMousePos.x, lastMousePos.y, brushsize, {255, 255, 255, static_cast<unsigned char>(150 * drawbrushtimer)});
     }
 }
 

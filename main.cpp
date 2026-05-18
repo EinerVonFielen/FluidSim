@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     SetTargetFPS(framerate);
     SetExitKey(KEY_NULL);
 
-    scene.CreateCells(ivec2(100, 50), 40);
+    scene.CreateCells(ivec2(320, 180), 40);
 
     unsigned long int framecounter = 1, drawtime = 0, updatetime = 0;
 
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
         scene.CameraUpdate();
 
         auto startupdate = std::chrono::system_clock::now();
-        scene.Update(dt/10);
+        scene.Update(dt);
         updatetime += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now() - startupdate).count();
 
         BeginDrawing();
