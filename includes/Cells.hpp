@@ -36,6 +36,9 @@ class Cells{
     int selectedbrush = 1;
     int selectedoverlay = 6;
 
+    float* smoke;
+    float* smoketemp;
+
     Cells(ivec2 size, float cellsize);
     void Draw();
     void Update(float dt, Vector2 mousePos);
@@ -44,10 +47,14 @@ class Cells{
     void UpdatePressureMid(float, int, int, bool);
     void UpdatePressureEdge(float, bool);
     float GetDivergence(ivec2);
+    vec2 GetVelocity(ivec2);
     void UpdateVelocities(float deltaTime);
     void ApplyPressure(float deltaTime);
     vec2 GetVelocityAtPosition(vec2 pos);
     void SetVelocities();
+    void AdvectSmoke(float);
+    float SampleSmoke(vec2);
+    void SmokeMouse(Vector2);
     void MouseVelocityChange(Vector2 mousePos);
     void MouseSolid(Vector2 mousePos);
     void DrawMouseCircle();

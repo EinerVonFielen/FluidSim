@@ -9,6 +9,8 @@ Cells::Cells(ivec2 Size, float Cellsize){
     brushsize = 5 * cellsize;
     cellcount = size.x * size.y;
     cells = new Cell[cellcount];
+    smoke = new float[cellcount];
+    smoketemp = new float[cellcount];
     velocitiesX = new float[cellcount + size.y];
     velocitiesY = new float[cellcount + size.x];
     newvelocitiesX = new float[cellcount + size.y];
@@ -100,6 +102,17 @@ Color VelocityToColor(vec2 vel){
 }
 
 
+Color SmokeToColor(float f){
+
+    f = glm::clamp(f, 0.0f, 10.0f) / 10.0f;
+    float f_inv = 1 - f;
+    return {static_cast<unsigned char>(GRAY1.r * f_inv + WHITE.r * f),
+        static_cast<unsigned char>(GRAY1.g * f_inv + WHITE.g * f),
+        static_cast<unsigned char>(GRAY1.b * f_inv + WHITE.b * f),
+        255};
+}
+
+
 void Cells::Draw(){
     const int outline = cellsize / 20.0f;
     DrawRectangle(-outline, -outline, size.x * cellsize + outline * 2, size.y * cellsize + outline * 2, GRAY2);
@@ -114,10 +127,13 @@ void Cells::Draw(){
                     cellcolor = PressureToColor(current_cell.pressure);
                     break;
                 case 7:
-                    cellcolor = VelocityToColor(vec2(velocitiesX[y * (size.x + 1) + x] + velocitiesX[y * (size.x + 1) + x + 1], velocitiesY[y * size.x + x] + velocitiesY[(y + 1) * size.x + x]) * 0.5f);
+                    cellcolor = VelocityToColor(GetVelocity(ivec2(x, y)));
                     break;
                 case 8:
                     cellcolor = DivergenceToColor(GetDivergence(ivec2(x, y)));
+                    break;
+                case 9:
+                    cellcolor = SmokeToColor(smoke[i]);
                     break;
                 default:
                     cellcolor = GRAY1;
@@ -156,9 +172,12 @@ void Cells::Update(float dt, Vector2 mousePos){
     }
     ApplyPressure(dt);
 
+    AdvectSmoke(dt);
+
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
         MouseVelocityChange(mousePos);
         MouseSolid(mousePos);
+        SmokeMouse(mousePos);
     }
 
     ChangeBrush();
@@ -179,6 +198,11 @@ float Cells::GetDivergence(ivec2 pos){
     float velocityYUp = velocitiesY[pos.y * size.x + pos.x];
     float velocityYDown = velocitiesY[(pos.y + 1) * size.x + pos.x];
     return (velocityXRight - velocityXLeft + velocityYDown - velocityYUp) / cellsize;
+}
+
+
+vec2 Cells::GetVelocity(ivec2 pos){
+    return vec2(velocitiesX[pos.y * (size.x + 1) + pos.x] + velocitiesX[pos.y * (size.x + 1) + pos.x + 1], velocitiesY[pos.y * size.x + pos.x] + velocitiesY[(pos.y + 1) * size.x + pos.x]) * 0.5f;
 }
 
 
@@ -464,6 +488,57 @@ void Cells::UpdateVelocities(float dt){
 }
 
 
+float Cells::SampleSmoke(vec2 ppos)
+{
+    float gx = ppos.x / cellsize - 0.5f;
+    float gy = ppos.y / cellsize - 0.5f;
+
+    int x0 = (int)gx;
+    int y0 = (int)gy;
+
+    float fx = gx - x0;
+    float fy = gy - y0;
+
+    int x1 = x0 + 1;
+    int y1 = y0 + 1;
+
+    x0 = std::clamp(x0, 0, size.x - 1);
+    x1 = std::clamp(x1, 0, size.x - 1);
+    y0 = std::clamp(y0, 0, size.y - 1);
+    y1 = std::clamp(y1, 0, size.y - 1);
+
+    float s00 = smoke[y0 * size.x + x0];
+    float s10 = smoke[y0 * size.x + x1];
+    float s01 = smoke[y1 * size.x + x0];
+    float s11 = smoke[y1 * size.x + x1];
+
+    float sx0 = s00 * (1 - fx) + s10 * fx;
+    float sx1 = s01 * (1 - fx) + s11 * fx;
+
+    return sx0 * (1 - fy) + sx1 * fy;
+}
+
+
+void Cells::AdvectSmoke(float dt){
+    for (int y = 1; y < size.y - 1; y++){
+        for (int x = 1; x < size.x - 1; x++){
+            int i = y * size.x + x;
+
+            vec2 vel = GetVelocity(ivec2(x, y));
+
+            vec2 ppos = vec2(x, y) * cellsize + vec2(cellsize / 2.0f) - vel * dt;
+            ppos.x = std::clamp(ppos.x, 0.0f, size.x * cellsize);
+            ppos.y = std::clamp(ppos.y, 0.0f, size.y * cellsize);
+
+            smoketemp[i] = SampleSmoke(ppos);
+        }
+    }
+    float* temp = smoke;
+    smoke = smoketemp;
+    smoketemp = temp;
+}
+
+
 void Cells::MouseVelocityChange(Vector2 mousePos){
     if (selectedbrush != 3) return;
     Vector2 mouseDiff = {mousePos.x - lastMousePos.x, mousePos.y - lastMousePos.y};
@@ -510,6 +585,29 @@ void Cells::MouseSolid(Vector2 mousePos){
         for (int y = newymin; y < newymax; y++){
             cells[y * size.x + x].notsolid = static_cast<bool>(selectedbrush - 1);
             cells[y * size.x + x].pressure = 0;
+            smoke[y * size.x + x] = 0.0f;
+        }
+    }
+}
+
+
+void Cells::SmokeMouse(Vector2 mousePos){
+    if (selectedbrush != 4) return;
+    if (mousePos.x < 0 || mousePos.y < 0 || mousePos.x > cellsize * size.x || mousePos.y > cellsize * size.y) return;
+    int cellbrushsize = static_cast<int>(brushsize / cellsize);
+    ivec2 mousepos = ivec2(static_cast<int>(mousePos.x / cellsize), static_cast<int>(mousePos.y / cellsize));
+
+    int xmin = glm::max(0, mousepos.x - cellbrushsize);
+    int xmax = glm::min(size.x, mousepos.x + cellbrushsize + 1);
+    int ymin = glm::max(0, mousepos.y - cellbrushsize);
+    int ymax = glm::min(size.y, mousepos.y + cellbrushsize + 1);
+
+    for (int x = xmin; x < xmax; x++){
+        int heightlimit = static_cast<int>(glm::sqrt(cellbrushsize * cellbrushsize - (x - mousepos.x) * (x - mousepos.x)));
+        int newymin = glm::max(ymin, mousepos.y - heightlimit);
+        int newymax = glm::min(ymax, mousepos.y + heightlimit + 1);
+        for (int y = newymin; y < newymax; y++){
+            smoke[y * size.x + x] = 10.0f;
         }
     }
 }
