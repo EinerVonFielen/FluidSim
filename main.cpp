@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 
     while(!WindowShouldClose()){
 
-        if (IsWindowResized){
+        if (IsWindowResized()){
             vec2 newSize = vec2(GetRenderWidth(), GetRenderHeight());
             scene.SetSize(newSize);
         }
