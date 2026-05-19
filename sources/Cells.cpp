@@ -111,7 +111,7 @@ Color VelocityToColor(vec2 vel){
 void Cells::Draw(){
     const int outline = cellsize / 20.0f;
     DrawRectangle(-outline, -outline, size.x * cellsize + outline * 2, size.y * cellsize + outline * 2, GRAY2);
-
+    DrawText(TextFormat("Divergence: %.4f", calcTotalDivergence()), 100, 100, 200, GREEN);
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
             int i = y * size.x + x;
@@ -175,7 +175,13 @@ void Cells::Update(float dt, Vector2 mousePos){
     lastMousePos = mousePos;
 }
 
-
+float Cells::calcTotalDivergence(){
+    float totalDivergence = 0.0f;
+    for (int i = 0; i < cellcount; i++){
+        totalDivergence += glm::abs(cells[i].divergence);
+    }
+    return totalDivergence;
+}
 void Cells::UpdateDivergence(){
     for (int y = 0; y < size.y; y++){
         for (int x = 0; x < size.x; x++){
@@ -236,7 +242,7 @@ void Cells::UpdatePressure(float dt, uint32_t x, uint32_t y){
         neighbor_count++;
         velocity_difference_y += velocitiesY[current_index + size.x];
     }
-    current_cell.pressure = pressure_sum / neighbor_count - (cellsize * (velocity_difference_x + velocity_difference_y)) / (neighbor_count * dt);
+    current_cell.pressure = current_cell.pressure + ((pressure_sum / neighbor_count - (cellsize * (velocity_difference_x + velocity_difference_y)) / (neighbor_count * dt)) - current_cell.pressure) * 1.5;
 }
 
 

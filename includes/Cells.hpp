@@ -47,6 +47,7 @@ class Cells{
     void ApplyPressure(float deltaTime);
     vec2 GetVelocityAtPosition(vec2 pos);
     void SetVelocities();
+    float calcTotalDivergence();
     void MouseVelocityChange(Vector2 mousePos);
     void MouseSolid(Vector2 mousePos);
     void DrawMouseCircle();
